@@ -1,0 +1,14 @@
+# Cosh - Git Ignore
+# binary_target
+cosh
+# Build artifacts
+obj/
+*.o
+#App-specific runtime data
+.cosh/
+# Editor & System temporary files
+*~
+*.swp
+*.swo
+.DS_Store
+
