@@ -16,7 +16,12 @@ void wm_init(void)
 	curs_set(0);
 	start_color();
 	set_escdelay(25);
-	mousemask(BUTTON1_PRESSED, NULL);
+
+	if (can_change_color())
+		init_color(COLOR_BLUE, 0, 0, 666);
+	
+	/* Only capture clicks to save CPU and terminal bandwidth */
+	mousemask(BUTTON1_PRESSED | BUTTON1_CLICKED, NULL);
 
 	init_pair(CP_TOS_STD, COLOR_BLUE, COLOR_WHITE);
 	init_pair(CP_TOS_HDR, COLOR_WHITE, COLOR_BLUE);
@@ -48,18 +53,22 @@ static void win_render_frame(cosh_win_t *win, int is_focused)
 
 void win_raise(int idx)
 {
-	if (idx < 0 || idx >= wm.count || idx == wm.count - 1) {
-		wm.focus_idx = (wm.count > 0) ? wm.count - 1 : -1;
+	cosh_win_t *tmp;
+	if (idx < 0 || idx >= wm.count)
 		return;
+
+	if (idx != wm.count - 1) {
+		tmp = wm.stack[idx];
+		for (int i = idx; i < wm.count - 1; i++)
+			wm.stack[i] = wm.stack[i + 1];
+		wm.stack[wm.count - 1] = tmp;
 	}
-
-	cosh_win_t *tmp = wm.stack[idx];
-	for (int i = idx; i < wm.count - 1; i++)
-		wm.stack[i] = wm.stack[i + 1];
-
-	wm.stack[wm.count - 1] = tmp;
 	wm.focus_idx = wm.count - 1;
-}
+
+	/* Mark all as dirty to handle overlap redraws */
+	for (int i = 0; i < wm.count; i++)
+		wm.stack[i]->dirty = 1;
+}	
 
 cosh_win_t *win_create(int h, int w, char *title, render_fn r, input_fn i)
 {
@@ -79,7 +88,6 @@ cosh_win_t *win_create(int h, int w, char *title, render_fn r, input_fn i)
 	win->ptr = newwin(h, w, ny, nx);
 	win->x = nx; win->y = ny;
 	win->w = w;  win->h = h;
-	win->active = 1;
 	win->dirty = 1;
 	win->render_cb = r;
 	win->input_cb = i;
@@ -118,35 +126,54 @@ void win_destroy_focused(void)
 
 void win_move_focused(int dy, int dx)
 {
-	cosh_win_t *win;
+	cosh_win_t *w;
 	if (wm.focus_idx < 0)
 		return;
 
-	win = wm.stack[wm.focus_idx];
-	win->y += dy;
-	win->x += dx;
-	mvwin(win->ptr, win->y, win->x);
-	win_raise(wm.focus_idx);
+	w = wm.stack[wm.focus_idx];
+	w->y += dy;
+	w->x += dx;
+	
+	/* Bound check for terminal edges */
+	if (w->y < 0) w->y = 0;
+	if (w->x < 0) w->x = 0;
+	if (w->y > LINES - 2) w->y = LINES - 2;
+	if (w->x > COLS - 2) w->x = COLS - 2;
+
+	mvwin(w->ptr, w->y, w->x);
 	win_needs_redraw = 1;
 }
 
 void win_handle_mouse(void)
 {
-	MEVENT event;
-	if (getmouse(&event) != OK)
+	MEVENT ev;
+	if (getmouse(&ev) != OK)
 		return;
 
-	if (event.bstate & BUTTON1_PRESSED) {
+	/* Simple click handling: Focus window or hit close button */
+	if (ev.bstate & (BUTTON1_PRESSED | BUTTON1_CLICKED)) {
 		for (int i = wm.count - 1; i >= 0; i--) {
 			cosh_win_t *w = wm.stack[i];
-			if (event.y >= w->y && event.y < (w->y + w->h) &&
-			    event.x >= w->x && event.x < (w->x + w->w)) {
+			
+			if (ev.y >= w->y && ev.y < (w->y + w->h) &&
+			    ev.x >= w->x && ev.x < (w->x + w->w)) {
+				
 				win_raise(i);
+				
+				/* Close button check */
+				if (ev.y == w->y && ev.x >= (w->x + w->w - 4) && 
+				    ev.x < (w->x + w->w - 1)) {
+					win_destroy_focused();
+					return;
+				}
+
+				if (w->input_cb)
+					w->input_cb(w, KEY_MOUSE);
+				
 				win_needs_redraw = 1;
 				return;
 			}
 		}
-
 		wm.focus_idx = -1;
 		win_needs_redraw = 1;
 	}
@@ -161,8 +188,9 @@ static void draw_statusbar(void)
 	strftime(time_str, sizeof(time_str), "%H:%M:%S", t);
 
 	attron(COLOR_PAIR(CP_TOS_BAR));
-	mvprintw(LINES - 1, 0, "🕓 %s | Open: %d/%d | +[%s]", 
-		 time_str, wm.count, WIN_MAX, wm.focus_idx >= 0 ? wm.stack[wm.focus_idx]->title : "Desktop");
+	mvprintw(LINES - 1, 0, " ⌚ %s | Open: %d/%d | Focus: %s", 
+		 time_str, wm.count, WIN_MAX, 
+		 wm.focus_idx >= 0 ? wm.stack[wm.focus_idx]->title : "Desktop");
 	clrtoeol();
 	attroff(COLOR_PAIR(CP_TOS_BAR));
 }
@@ -186,8 +214,7 @@ void win_refresh_all(void)
 				w->render_cb(w);
 			w->dirty = 0;
 		}
-		if (win_needs_redraw)
-			win_render_frame(w, (i == wm.focus_idx));
+		win_render_frame(w, (i == wm.focus_idx));
 		wnoutrefresh(w->ptr);
 	}
 

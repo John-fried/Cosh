@@ -34,12 +34,10 @@ typedef struct {
 	int focus_idx;
 } cosh_wm_t;
 
-/* Global state exported for main loop and apps */
 extern cosh_wm_t wm;
 extern int win_needs_redraw;
 extern int win_force_full;
 
-/* Core WM API */
 void wm_init(void);
 cosh_win_t *win_create(int h, int w, char *title, render_fn r, input_fn i);
 void win_destroy_focused(void);

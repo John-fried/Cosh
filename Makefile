@@ -1,11 +1,11 @@
 # COSH - C-Operating System Shell
-# Professional Makefile with dynamic paths
+# Professional Makefile with dynamic apps detection
 
 CC      := gcc
 CFLAGS  := -Wall -Wextra -O2 -std=gnu99
 LDFLAGS := -lncurses
 
-# Installation Paths (Dynamic)
+# Installation Paths
 PREFIX  ?= /usr/local
 BINDIR  := $(PREFIX)/bin
 DESTDIR ?=
@@ -16,18 +16,28 @@ OBJ_DIR := obj
 
 # Files
 TARGET  := cosh
-SRCS    := cosh.c wmcurses.c $(APP_DIR)/iterm.c
-OBJS    := $(SRCS:%.c=$(OBJ_DIR)/%.o)
+
+# Core source files (Explicitly defined)
+CORE_SRCS := cosh.c wmcurses.c util.c
+
+# Dynamic apps discovery (Wildcard apps/*.c)
+APP_SRCS  := $(wildcard $(APP_DIR)/*.c)
+
+# Combine all sources
+SRCS      := $(CORE_SRCS) $(APP_SRCS)
+
+# Generate object paths in obj/ directory
+OBJS      := $(SRCS:%.c=$(OBJ_DIR)/%.o)
 
 # Default rule
 all: $(TARGET)
 
-# Linking the final binary
+# Linking
 $(TARGET): $(OBJS)
 	@echo "  LD      $@"
 	@$(CC) $(OBJS) -o $@ $(LDFLAGS)
 
-# Compiling source files to objects
+# Compiling (Handles nested directory structure in obj/)
 $(OBJ_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
 	@echo "  CC      $<"
@@ -38,13 +48,13 @@ clean:
 	@echo "  CLEAN"
 	@rm -rf $(OBJ_DIR) $(TARGET)
 
-# Installation with directory creation
+# Install
 install: $(TARGET)
 	@echo "  INSTALL $(DESTDIR)$(BINDIR)/$(TARGET)"
 	@mkdir -p $(DESTDIR)$(BINDIR)
 	@install -m 755 $(TARGET) $(DESTDIR)$(BINDIR)/$(TARGET)
 
-# Uninstallation
+# Uninstall
 uninstall:
 	@echo "  UNINSTALL $(DESTDIR)$(BINDIR)/$(TARGET)"
 	@rm -f $(DESTDIR)$(BINDIR)/$(TARGET)
