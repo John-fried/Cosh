@@ -2,10 +2,32 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 cosh_wm_t wm = { .count = 0, .focus_idx = -1 };
 int win_needs_redraw = 1;
 int win_force_full = 0;
+
+/**
+ * win_apply_colors - Assign and initialize color pairs for a window
+ * @win: pointer to window object
+ * @idx: stack index to ensure unique color pair
+ */
+static void win_apply_colors(cosh_win_t *win, int idx)
+{
+	if (!win || !win->ptr)
+		return;
+
+	if (win->fg != -1 && win->bg != -1) {
+		/* Use stack index to prevent pair collision */
+		win->color_pair = CP_WIN_START + idx;
+		init_pair(win->color_pair, win->fg, win->bg);
+	} else {
+		win->color_pair = CP_TOS_STD;
+	}
+
+	wbkgd(win->ptr, COLOR_PAIR(win->color_pair));
+}
 
 void wm_init(void)
 {
@@ -20,7 +42,6 @@ void wm_init(void)
 	if (can_change_color())
 		init_color(COLOR_BLUE, 0, 0, 666);
 	
-	/* Only capture clicks to save CPU and terminal bandwidth */
 	mousemask(BUTTON1_PRESSED | BUTTON1_CLICKED, NULL);
 
 	init_pair(CP_TOS_STD, COLOR_BLUE, COLOR_WHITE);
@@ -31,24 +52,157 @@ void wm_init(void)
 	wbkgd(stdscr, COLOR_PAIR(CP_TOS_STD));
 }
 
+/**
+ * win_create - Create window with automatic positioning/sizing
+ * @h: height (0 for default)
+ * @w: width (0 for default)
+ * @flags: window behavior flags
+ */
+cosh_win_t *win_create(int h, int w, int flags)
+{
+	cosh_win_t *win;
+	int ny, nx;
+
+	if (wm.count >= WIN_MAX)
+		return NULL;
+
+	/* Logic: Automatic sizing if 0 is passed */
+	if (h <= 0) h = LINES / 2;
+	if (w <= 0) w = COLS / 2;
+
+	/* Guard: Ensure window fits screen */
+	if (h > LINES - 1) h = LINES - 1;
+	if (w > COLS) w = COLS;
+
+	win = calloc(1, sizeof(cosh_win_t));
+	if (!win)
+		return NULL;
+
+	/* Staggered positioning logic */
+	ny = 2 + (wm.count * 2) % (LINES - h - 1);
+	nx = 5 + (wm.count * 4) % (COLS - w - 1);
+
+	win->ptr = newwin(h, w, ny, nx);
+	win->x = nx; win->y = ny;
+	win->w = w;  win->h = h;
+	win->flags = flags;
+	win->dirty = 1;
+	win->fg = -1;
+	win->bg = -1;
+
+	keypad(win->ptr, TRUE);
+	wm.stack[wm.count] = win;
+	win_apply_colors(win, wm.count);
+
+	wm.focus_idx = wm.count;
+	wm.count++;
+
+	win_needs_redraw = 1;
+	return win;
+}
+
+/**
+ * win_resize_focused - Adjust dimensions of the active window
+ * @dh: delta height
+ * @dw: delta width
+ */
+void win_resize_focused(int dh, int dw)
+{
+	cosh_win_t *w;
+
+	if (wm.focus_idx < 0)
+		return;
+
+	w = wm.stack[wm.focus_idx];
+
+	/* Guard: Ignore if locked or fullscreen */
+	if (w->flags & (WIN_FLAG_LOCKED | WIN_FLAG_FULLSCREEN))
+		return;
+
+	/* Apply new dimensions with boundary checks */
+	int nh = w->h + dh;
+	int nw = w->w + dw;
+
+	/* Minimal window size: 4x10 */
+	if (nh < 4 || nh > LINES - 1) return;
+	if (nw < 10 || nw > COLS) return;
+
+	/* Verify if window still fits at current position */
+	if (w->y + nh > LINES - 1) nh = LINES - 1 - w->y;
+	if (w->x + nw > COLS) nw = COLS - w->x;
+
+	w->h = nh;
+	w->w = nw;
+
+	wresize(w->ptr, w->h, w->w);
+	
+	w->dirty = 1;
+	win_needs_redraw = 1;
+}
+
+
+void win_setopt(cosh_win_t *win, win_opt_t opt, ...)
+{
+	va_list ap;
+	int idx = -1;
+
+	if (!win) return;
+
+	/* Find object index for color pair calculation */
+	for (int i = 0; i < wm.count; i++) {
+		if (wm.stack[i] == win) {
+			idx = i;
+			break;
+		}
+	}
+
+	va_start(ap, opt);
+	switch (opt) {
+	case WIN_OPT_TITLE:
+		strncpy(win->title, va_arg(ap, char *), 31);
+		break;
+	case WIN_OPT_RENDER:
+		win->render_cb = va_arg(ap, render_fn);
+		break;
+	case WIN_OPT_INPUT:
+		win->input_cb = va_arg(ap, input_fn);
+		break;
+	case WIN_OPT_FG:
+		win->fg = va_arg(ap, int);
+		if (idx != -1) win_apply_colors(win, idx);
+		break;
+	case WIN_OPT_BG:
+		win->bg = va_arg(ap, int);
+		if (idx != -1) win_apply_colors(win, idx);
+		break;
+	case WIN_OPT_PRIV:
+		win->priv = va_arg(ap, void *);
+		break;
+	}
+	va_end(ap);
+	win->dirty = 1;
+}
+
 static void win_render_frame(cosh_win_t *win, int is_focused)
 {
-	int color = is_focused ? CP_TOS_HDR : CP_TOS_STD;
+	int hdr_color = is_focused ? CP_TOS_HDR : win->color_pair;
 
-	wattron(win->ptr, COLOR_PAIR(CP_TOS_STD));
+	wattron(win->ptr, COLOR_PAIR(win->color_pair));
 	box(win->ptr, 0, 0);
 
-	wattron(win->ptr, COLOR_PAIR(color));
+	wattron(win->ptr, COLOR_PAIR(hdr_color));
 	for (int i = 1; i < win->w - 1; i++)
 		mvwaddch(win->ptr, 0, i, ' ');
 
 	mvwprintw(win->ptr, 0, 2, " %s ", win->title);
 	
-	wattron(win->ptr, COLOR_PAIR(CP_TOS_ACC));
-	mvwprintw(win->ptr, 0, win->w - 4, "[x]");
+	if (!(win->flags & WIN_FLAG_LOCKED)) {
+		wattron(win->ptr, COLOR_PAIR(CP_TOS_ACC));
+		mvwprintw(win->ptr, 0, win->w - 4, "X");
+		wattroff(win->ptr, COLOR_PAIR(CP_TOS_ACC));
+	}
 	
-	wattroff(win->ptr, COLOR_PAIR(CP_TOS_ACC));
-	wattroff(win->ptr, COLOR_PAIR(color));
+	wattroff(win->ptr, COLOR_PAIR(hdr_color));
 }
 
 void win_raise(int idx)
@@ -65,43 +219,76 @@ void win_raise(int idx)
 	}
 	wm.focus_idx = wm.count - 1;
 
-	/* Mark all as dirty to handle overlap redraws */
 	for (int i = 0; i < wm.count; i++)
 		wm.stack[i]->dirty = 1;
-}	
+}
 
-cosh_win_t *win_create(int h, int w, char *title, render_fn r, input_fn i)
+void win_vibrate(void)
 {
-	cosh_win_t *win;
-	int ny, nx;
+    beep();
 
-	if (wm.count >= WIN_MAX)
-		return NULL;
+    if (wm.focus_idx >= 0) {
+        cosh_win_t *w = wm.stack[wm.focus_idx];
+        int orig_x = w->x;
 
-	win = calloc(1, sizeof(cosh_win_t));
+	/* shock pattern */
+        int offsets[] = {-1, 1, -1, 1, 0};
+        
+        for (int i = 0; i < 5; i++) {
+            w->x = orig_x + offsets[i];
+            mvwin(w->ptr, w->y, w->x);
+            
+            win_needs_redraw = 1;
+            win_refresh_all();
+            
+            usleep(30000); 
+        }
+    }
+}
+
+void win_ding(void) { win_vibrate(); }
+
+/**
+ * win_toggle_fullscreen - Toggle window between fullscreen and normal state
+ * @win: pointer to the window structure
+ *
+ * Implements restoration of previous geometry when exiting fullscreen.
+ */
+void win_toggle_fullscreen(cosh_win_t *win)
+{
 	if (!win)
-		return NULL;
+		return;
 
-	ny = 2 + (wm.count * 2) % (LINES - h - 2);
-	nx = 5 + (wm.count * 4) % (COLS - w - 2);
+	if (!(win->flags & WIN_FLAG_FULLSCREEN)) {
+		/* Save current geometry for restoration */
+		win->rx = win->x;
+		win->ry = win->y;
+		win->rw = win->w;
+		win->rh = win->h;
 
-	win->ptr = newwin(h, w, ny, nx);
-	win->x = nx; win->y = ny;
-	win->w = w;  win->h = h;
+		/* Set to fullscreen (avoiding status bar at LINES-1) */
+		win->x = 0;
+		win->y = 0;
+		win->w = COLS;
+		win->h = LINES - 1;
+
+		win->flags |= WIN_FLAG_FULLSCREEN;
+	} else {
+		/* Restore previous geometry */
+		win->x = win->rx;
+		win->y = win->ry;
+		win->w = win->rw;
+		win->h = win->rh;
+
+		win->flags &= ~WIN_FLAG_FULLSCREEN;
+	}
+
+	/* Atomic ncurses resize and move */
+	wresize(win->ptr, win->h, win->w);
+	mvwin(win->ptr, win->y, win->x);
+
 	win->dirty = 1;
-	win->render_cb = r;
-	win->input_cb = i;
-	strncpy(win->title, title, 31);
-
-	wbkgd(win->ptr, COLOR_PAIR(CP_TOS_STD));
-	keypad(win->ptr, TRUE);
-
-	wm.stack[wm.count] = win;
-	wm.focus_idx = wm.count;
-	wm.count++;
-
 	win_needs_redraw = 1;
-	return win;
 }
 
 void win_destroy_focused(void)
@@ -131,10 +318,12 @@ void win_move_focused(int dy, int dx)
 		return;
 
 	w = wm.stack[wm.focus_idx];
+	if (w->flags & (WIN_FLAG_LOCKED | WIN_FLAG_FULLSCREEN))
+			return;
+
 	w->y += dy;
 	w->x += dx;
 	
-	/* Bound check for terminal edges */
 	if (w->y < 0) w->y = 0;
 	if (w->x < 0) w->x = 0;
 	if (w->y > LINES - 2) w->y = LINES - 2;
@@ -150,7 +339,6 @@ void win_handle_mouse(void)
 	if (getmouse(&ev) != OK)
 		return;
 
-	/* Simple click handling: Focus window or hit close button */
 	if (ev.bstate & (BUTTON1_PRESSED | BUTTON1_CLICKED)) {
 		for (int i = wm.count - 1; i >= 0; i--) {
 			cosh_win_t *w = wm.stack[i];
@@ -160,9 +348,8 @@ void win_handle_mouse(void)
 				
 				win_raise(i);
 				
-				/* Close button check */
-				if (ev.y == w->y && ev.x >= (w->x + w->w - 4) && 
-				    ev.x < (w->x + w->w - 1)) {
+				if (!(w->flags & WIN_FLAG_LOCKED) && ev.y == w->y && 
+				    ev.x >= (w->x + w->w - 4) && ev.x < (w->x + w->w - 1)) {
 					win_destroy_focused();
 					return;
 				}
@@ -188,8 +375,8 @@ static void draw_statusbar(void)
 	strftime(time_str, sizeof(time_str), "%H:%M:%S", t);
 
 	attron(COLOR_PAIR(CP_TOS_BAR));
-	mvprintw(LINES - 1, 0, " ⌚ %s | Open: %d/%d | Focus: %s", 
-		 time_str, wm.count, WIN_MAX, 
+	mvprintw(LINES - 1, 0, " %s | Active: %d | Focus: %s", 
+		 time_str, wm.count, 
 		 wm.focus_idx >= 0 ? wm.stack[wm.focus_idx]->title : "Desktop");
 	clrtoeol();
 	attroff(COLOR_PAIR(CP_TOS_BAR));

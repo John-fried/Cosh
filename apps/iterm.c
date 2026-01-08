@@ -15,8 +15,7 @@ static void iterm_exec(iterm_state_t *sh)
 	FILE *fp;
 	size_t n;
 
-	if (strlen(sh->cmd_buf) == 0)
-		return;
+	if (strlen(sh->cmd_buf) == 0) return;
 
 	if (strncmp(sh->cmd_buf, "cd ", 3) == 0) {
 		if (chdir(sh->cmd_buf + 3) == 0) {
@@ -61,7 +60,7 @@ void app_iterm_render(cosh_win_t *win)
 	int row = 3;
 
 	wattron(win->ptr, A_BOLD);
-	mvwprintw(win->ptr, 1, 2, "God@Cosh:%s$ %s", sh->cwd, sh->cmd_buf);
+	mvwprintw(win->ptr, 1, 2, "%s $ %s", sh->cwd, sh->cmd_buf);
 	wattroff(win->ptr, A_BOLD);
 
 	mvwhline(win->ptr, 2, 1, ACS_HLINE, win->w - 2);
@@ -75,21 +74,17 @@ void app_iterm_render(cosh_win_t *win)
 	free(out_copy);
 }
 
-/* Helper to initialize the iterm window */
 void win_spawn_iterm(void)
 {
-	cosh_win_t *win = win_create(18, 70, "System Terminal", 
-				     app_iterm_render, app_iterm_input);
-	if (!win) return;
-
 	iterm_state_t *sh = calloc(1, sizeof(iterm_state_t));
 	getcwd(sh->cwd, sizeof(sh->cwd));
-	
-	/* v7 Welcome Message as initial state */
-	snprintf(sh->last_out, sizeof(sh->last_out), 
-		 "Welcome, Super Genius.\n"
-		 "Let's obey God together to use this OS.\n"
-		 "Type commands below.");
-	
-	win->priv = sh;
+	snprintf(sh->last_out, sizeof(sh->last_out), "Terminal ready.");
+
+	cosh_win_t *win = win_create(18, 70, WIN_FLAG_NONE);
+	if (!win) { free(sh); return; }
+
+	win_setopt(win, WIN_OPT_TITLE,  "System Terminal");
+	win_setopt(win, WIN_OPT_RENDER, app_iterm_render);
+	win_setopt(win, WIN_OPT_INPUT,  app_iterm_input);
+	win_setopt(win, WIN_OPT_PRIV,   sh);
 }

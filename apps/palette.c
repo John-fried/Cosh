@@ -52,18 +52,12 @@ void app_palette_input(cosh_win_t *win, int ch)
 	palette_state_t *st = (palette_state_t *)win->priv;
 	int len = strlen(st->query);
 
-	if (ch == KEY_MOUSE) {
-		/* Simply mark as dirty to confirm focus on click */
-		win->dirty = 1;
-		return;
-	}
+	if (ch == KEY_MOUSE) { win->dirty = 1; return; }
 
 	if (ch == '\n' || ch == KEY_ENTER) {
 		void (*spawn_ptr)(void) = registry[st->selection].spawn;
-		/* Destroy palette FIRST so win_create focuses correctly */
 		win_destroy_focused();
-		if (spawn_ptr)
-			spawn_ptr();
+		if (spawn_ptr) spawn_ptr();
 		return;
 	} else if (ch == KEY_UP) {
 		if (st->selection > 0) st->selection--;
@@ -89,21 +83,21 @@ void app_palette_render(cosh_win_t *win)
 	for (size_t i = 0; i < REG_SIZE; i++) {
 		if (i == (size_t)st->selection)
 			wattron(win->ptr, A_REVERSE);
-		
-		mvwprintw(win->ptr, 3 + i, 2, " %-20s (dist: %d)", 
-			 registry[i].name, registry[i].score);
-		
+		mvwprintw(win->ptr, 3 + i, 2, " %-20s (dist: %d)", registry[i].name, registry[i].score);
 		wattroff(win->ptr, A_REVERSE);
 	}
 }
 
 void win_spawn_palette(void)
 {
-	cosh_win_t *win = win_create(15, 50, "Apps Palette", 
-				     app_palette_render, app_palette_input);
-	if (!win) return;
-
 	palette_state_t *st = calloc(1, sizeof(palette_state_t));
 	update_scores(st);
-	win->priv = st;
+
+	cosh_win_t *win = win_create(15, 50, WIN_FLAG_NONE);
+	if (!win) { free(st); return; }
+
+	win_setopt(win, WIN_OPT_TITLE,  "Apps Palette");
+	win_setopt(win, WIN_OPT_RENDER, app_palette_render);
+	win_setopt(win, WIN_OPT_INPUT,  app_palette_input);
+	win_setopt(win, WIN_OPT_PRIV,   st);
 }
