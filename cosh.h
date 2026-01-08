@@ -11,4 +11,6 @@
 
 #define WORKDIR		".cosh" 
 
+int get_workdir_usage(void);
+
 #endif /* COSH_H */

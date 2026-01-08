@@ -135,6 +135,15 @@ int boot()
 	return 0;
 }
 
+int get_workdir_usage(void)
+{
+	struct stat sb;
+	if (lstat(WORKDIR, &sb) == -1)
+		return -1;
+	else
+		return sb.st_size;	
+}
+
 int main(void)
 {
 	struct pollfd pfd = { .fd = 0, .events = POLLIN };

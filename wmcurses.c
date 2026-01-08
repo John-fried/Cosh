@@ -1,8 +1,18 @@
 #include "wmcurses.h"
+#include "cosh.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+
+/* Mouse Wheel definitions for older ncurses headers */
+#ifndef BUTTON4_PRESSED
+#define BUTTON4_PRESSED  000020000000L
+#endif
+#ifndef BUTTON5_PRESSED
+#define BUTTON5_PRESSED  000200000000L
+#endif
 
 cosh_wm_t wm = { .count = 0, .focus_idx = -1 };
 int win_needs_redraw = 1;
@@ -42,7 +52,8 @@ void wm_init(void)
 	if (can_change_color())
 		init_color(COLOR_BLUE, 0, 0, 666);
 	
-	mousemask(BUTTON1_PRESSED | BUTTON1_CLICKED, NULL);
+	/* Enable Click and Scroll Wheel */
+	mousemask(BUTTON1_PRESSED | BUTTON1_CLICKED | BUTTON4_PRESSED | BUTTON5_PRESSED, NULL);
 
 	init_pair(CP_TOS_STD, COLOR_BLUE, COLOR_WHITE);
 	init_pair(CP_TOS_HDR, COLOR_WHITE, COLOR_BLUE);
@@ -66,11 +77,9 @@ cosh_win_t *win_create(int h, int w, int flags)
 	if (wm.count >= WIN_MAX)
 		return NULL;
 
-	/* Logic: Automatic sizing if 0 is passed */
 	if (h <= 0) h = LINES / 2;
 	if (w <= 0) w = COLS / 2;
 
-	/* Guard: Ensure window fits screen */
 	if (h > LINES - 1) h = LINES - 1;
 	if (w > COLS) w = COLS;
 
@@ -78,7 +87,6 @@ cosh_win_t *win_create(int h, int w, int flags)
 	if (!win)
 		return NULL;
 
-	/* Staggered positioning logic */
 	ny = 2 + (wm.count * 2) % (LINES - h - 1);
 	nx = 5 + (wm.count * 4) % (COLS - w - 1);
 
@@ -101,11 +109,6 @@ cosh_win_t *win_create(int h, int w, int flags)
 	return win;
 }
 
-/**
- * win_resize_focused - Adjust dimensions of the active window
- * @dh: delta height
- * @dw: delta width
- */
 void win_resize_focused(int dh, int dw)
 {
 	cosh_win_t *w;
@@ -115,19 +118,15 @@ void win_resize_focused(int dh, int dw)
 
 	w = wm.stack[wm.focus_idx];
 
-	/* Guard: Ignore if locked or fullscreen */
 	if (w->flags & (WIN_FLAG_LOCKED | WIN_FLAG_FULLSCREEN))
 		return;
 
-	/* Apply new dimensions with boundary checks */
 	int nh = w->h + dh;
 	int nw = w->w + dw;
 
-	/* Minimal window size: 4x10 */
 	if (nh < 4 || nh > LINES - 1) return;
 	if (nw < 10 || nw > COLS) return;
 
-	/* Verify if window still fits at current position */
 	if (w->y + nh > LINES - 1) nh = LINES - 1 - w->y;
 	if (w->x + nw > COLS) nw = COLS - w->x;
 
@@ -140,7 +139,6 @@ void win_resize_focused(int dh, int dw)
 	win_needs_redraw = 1;
 }
 
-
 void win_setopt(cosh_win_t *win, win_opt_t opt, ...)
 {
 	va_list ap;
@@ -148,7 +146,6 @@ void win_setopt(cosh_win_t *win, win_opt_t opt, ...)
 
 	if (!win) return;
 
-	/* Find object index for color pair calculation */
 	for (int i = 0; i < wm.count; i++) {
 		if (wm.stack[i] == win) {
 			idx = i;
@@ -234,8 +231,6 @@ void win_vibrate(void)
     if (wm.focus_idx >= 0) {
         cosh_win_t *w = wm.stack[wm.focus_idx];
         int orig_x = w->x;
-
-	/* shock pattern */
         int offsets[] = {-1, 1, -1, 1, 0};
         
         for (int i = 0; i < 5; i++) {
@@ -252,25 +247,17 @@ void win_vibrate(void)
 
 void win_ding(void) { win_vibrate(); }
 
-/**
- * win_toggle_fullscreen - Toggle window between fullscreen and normal state
- * @win: pointer to the window structure
- *
- * Implements restoration of previous geometry when exiting fullscreen.
- */
 void win_toggle_fullscreen(cosh_win_t *win)
 {
 	if (!win)
 		return;
 
 	if (!(win->flags & WIN_FLAG_FULLSCREEN)) {
-		/* Save current geometry for restoration */
 		win->rx = win->x;
 		win->ry = win->y;
 		win->rw = win->w;
 		win->rh = win->h;
 
-		/* Set to fullscreen (avoiding status bar at LINES-1) */
 		win->x = 0;
 		win->y = 0;
 		win->w = COLS;
@@ -278,7 +265,6 @@ void win_toggle_fullscreen(cosh_win_t *win)
 
 		win->flags |= WIN_FLAG_FULLSCREEN;
 	} else {
-		/* Restore previous geometry */
 		win->x = win->rx;
 		win->y = win->ry;
 		win->w = win->rw;
@@ -287,7 +273,6 @@ void win_toggle_fullscreen(cosh_win_t *win)
 		win->flags &= ~WIN_FLAG_FULLSCREEN;
 	}
 
-	/* Atomic ncurses resize and move */
 	wresize(win->ptr, win->h, win->w);
 	mvwin(win->ptr, win->y, win->x);
 
@@ -337,34 +322,57 @@ void win_move_focused(int dy, int dx)
 	win_needs_redraw = 1;
 }
 
+/**
+ * win_handle_mouse - Process mouse clicks and scrolling
+ *
+ * This function translates scroll events into virtual KEY_UP/KEY_DOWN
+ * to ensure apps like Terminal support scrolling natively.
+ */
 void win_handle_mouse(void)
 {
 	MEVENT ev;
 	if (getmouse(&ev) != OK)
 		return;
 
-	if (ev.bstate & (BUTTON1_PRESSED | BUTTON1_CLICKED)) {
-		for (int i = wm.count - 1; i >= 0; i--) {
-			cosh_win_t *w = wm.stack[i];
+	/* Search from top to bottom of the stack */
+	for (int i = wm.count - 1; i >= 0; i--) {
+		cosh_win_t *w = wm.stack[i];
+		
+		/* Check if mouse is within window boundaries */
+		if (ev.y >= w->y && ev.y < (w->y + w->h) &&
+		    ev.x >= w->x && ev.x < (w->x + w->w)) {
 			
-			if (ev.y >= w->y && ev.y < (w->y + w->h) &&
-			    ev.x >= w->x && ev.x < (w->x + w->w)) {
-				
-				win_raise(i);
-				
+			win_raise(i);
+			
+			/* Handle Button 1 (Close Button) */
+			if (ev.bstate & (BUTTON1_PRESSED | BUTTON1_CLICKED)) {
 				if (!(w->flags & WIN_FLAG_LOCKED) && ev.y == w->y && 
 				    ev.x >= (w->x + w->w - 4) && ev.x < (w->x + w->w - 1)) {
 					win_destroy_focused();
 					return;
 				}
-
+				
 				if (w->input_cb)
 					w->input_cb(w, KEY_MOUSE);
-				
-				win_needs_redraw = 1;
-				return;
 			}
+			/* Handle Scroll Wheel Up -> Translate to KEY_UP */
+			else if (ev.bstate & BUTTON4_PRESSED) {
+				if (w->input_cb)
+					w->input_cb(w, KEY_UP);
+			}
+			/* Handle Scroll Wheel Down -> Translate to KEY_DOWN */
+			else if (ev.bstate & BUTTON5_PRESSED) {
+				if (w->input_cb)
+					w->input_cb(w, KEY_DOWN);
+			}
+			
+			win_needs_redraw = 1;
+			return;
 		}
+	}
+
+	/* Clicked on background */
+	if (ev.bstate & (BUTTON1_PRESSED | BUTTON1_CLICKED)) {
 		wm.focus_idx = -1;
 		win_needs_redraw = 1;
 	}
@@ -379,8 +387,8 @@ static void draw_statusbar(void)
 	strftime(time_str, sizeof(time_str), "%H:%M:%S", t);
 
 	attron(COLOR_PAIR(CP_TOS_BAR));
-	mvprintw(LINES - 1, 0, " %s | Active: %d | Focus: %s", 
-		 time_str, wm.count, 
+	mvprintw(LINES - 1, 0, " %s | Used: %d | Open Window: %d | [%s]", 
+		 time_str, get_workdir_usage(), wm.count, 
 		 wm.focus_idx >= 0 ? wm.stack[wm.focus_idx]->title : "Desktop");
 	clrtoeol();
 	attroff(COLOR_PAIR(CP_TOS_BAR));
