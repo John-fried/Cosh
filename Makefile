@@ -2,7 +2,7 @@
 # Professional Makefile with dynamic apps detection
 
 CC      := gcc
-CFLAGS  := -Wall -Wextra -O2 -std=gnu99
+CFLAGS  := -Wall -Wextra -O2 -std=gnu99 -DLOG_USE_COLOR
 LDFLAGS := -lncurses
 
 # Installation Paths
@@ -17,8 +17,8 @@ OBJ_DIR := obj
 # Files
 TARGET  := cosh
 
-# Core source files (Explicitly defined)
-CORE_SRCS := cosh.c wmcurses.c util.c
+# Core source files
+CORE_SRCS := $(wildcard ./*.c)
 
 # Dynamic apps discovery (Wildcard apps/*.c)
 APP_SRCS  := $(wildcard $(APP_DIR)/*.c)

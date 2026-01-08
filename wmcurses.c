@@ -178,7 +178,11 @@ void win_setopt(cosh_win_t *win, win_opt_t opt, ...)
 	case WIN_OPT_PRIV:
 		win->priv = va_arg(ap, void *);
 		break;
+	case WIN_OPT_DESTROY:
+	    win->destroy_cb = va_arg(ap, destroy_fn);
+	    break;
 	}
+
 	va_end(ap);
 	win->dirty = 1;
 }

@@ -19,7 +19,8 @@ typedef enum {
 	WIN_OPT_INPUT	= 3,
 	WIN_OPT_FG	= 4,
 	WIN_OPT_BG	= 5,
-	WIN_OPT_PRIV	= 6
+	WIN_OPT_PRIV	= 6,
+	WIN_OPT_DESTROY = 7
 } win_opt_t;
 
 /* TOS-inspired Color Pairs */
@@ -33,6 +34,7 @@ typedef enum {
 struct cosh_win;
 
 typedef void (*render_fn)(struct cosh_win *win);
+typedef void (*destroy_fn)(void *priv);
 typedef void (*input_fn)(struct cosh_win *win, int ch);
 
 typedef struct cosh_win {
@@ -46,6 +48,7 @@ typedef struct cosh_win {
 	int flags;
 	int fg, bg;		/* Cached colors for dynamic init */
 	void *priv;
+	destroy_fn destroy_cb;
 	render_fn render_cb;
 	input_fn input_cb;
 } cosh_win_t;

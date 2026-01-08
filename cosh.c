@@ -1,8 +1,4 @@
-#include "wmcurses.h"
-#include <poll.h>
-#include <errno.h>
-#include <sys/time.h>
-#include <sys/stat.h>
+#include "cosh.h"
 
 void win_spawn_iterm(void);
 void win_spawn_palette(void);
@@ -115,6 +111,29 @@ static void dispatch_input(int ch)
 	win_needs_redraw = 1;
 }
 
+int boot()
+{
+	struct stat sb;
+
+	log_trace("ensure workdir...");
+
+	if (lstat(WORKDIR, &sb) == -1) {
+		log_info("workdir uninitialized: %s", strerror(errno));
+		mkdir(WORKDIR, 0755);
+	} else {
+		if (S_ISREG(sb.st_mode)) {
+			log_error("workdir: %s is already exist as regular file (expected: directory)", WORKDIR);
+			return -1;
+		}
+
+	}
+	log_info("workdir is ready");
+
+	log_trace("rendering window...");
+	wm_init(); /* Init TUI */
+
+	return 0;
+}
 
 int main(void)
 {
@@ -122,9 +141,12 @@ int main(void)
 	struct timeval tv;
 	int ch, timeout;
 
-	mkdir(".cosh", 0755);
-	wm_init();
+	boot();
 	win_spawn_iterm();
+	if (wm.focus_idx >= 0)
+		win_toggle_fullscreen(wm.stack[wm.focus_idx]);
+
+	win_spawn_help();
 
 	while (1) {
 		if (win_needs_redraw) win_refresh_all();
