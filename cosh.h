@@ -10,7 +10,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 
-#define WORKDIR		".cosh"
+#include "configuration.h"
 
 struct workdir_state {
         long cached_size;

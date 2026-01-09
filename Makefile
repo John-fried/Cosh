@@ -1,8 +1,7 @@
 # COSH - C-Operating System Shell
-# Professional Makefile with dynamic apps detection
 
 CC      := gcc
-CFLAGS  := -Wall -Wextra -O2 -std=gnu99 -DLOG_USE_COLOR
+CFLAGS  := -Wall -Wextra -O3 -march=native -std=gnu99 -DLOG_USE_COLOR
 LDFLAGS := -lncurses -lvterm
 
 # Installation Paths

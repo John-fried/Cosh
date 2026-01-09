@@ -248,25 +248,23 @@ int main(void)
 
         win_spawn_help();
 
-        while (1) {
-                if (win_needs_redraw)
-                        win_refresh_all();
-                gettimeofday(&tv, NULL);
-                timeout = 1000 - (tv.tv_usec / 1000);
+	while (1) {
+	    if (win_needs_redraw) {
+		win_refresh_all();
+	    }
 
-                if (poll(&pfd, 1, timeout) > 0) {
-                        ch = getch();
-                        if (ch == CTRL('/')) {
-                                if (confirm_shutdown())
-                                        break;
-                                win_needs_redraw = 1;
-                                continue;
-                        }
-                        dispatch_input(ch);
-                } else {
-                        win_needs_redraw = 1;
-                }
-        }
+	    if (poll(&pfd, 1, TICK_DELAY) > 0) {
+		ch = getch();
+		if (ch == CTRL('/')) {
+		    if (confirm_shutdown()) break;
+		    win_needs_redraw = 1;
+		    continue;
+		}
+		dispatch_input(ch);
+	    } else {
+		win_needs_redraw = 1;
+	    }
+	}
 
         endwin();
         return 0;
