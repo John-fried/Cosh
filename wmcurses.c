@@ -1,12 +1,20 @@
 #include "wmcurses.h"
 #include "cosh.h"
 
-/* Mouse Wheel definitions for older ncurses headers */
+/* Mouse Wheel definitions */
 #ifndef BUTTON4_PRESSED
 #define BUTTON4_PRESSED  000020000000L
 #endif
 #ifndef BUTTON5_PRESSED
 #define BUTTON5_PRESSED  000200000000L
+#endif
+
+/* Mouse Wheel definitions for Horizontal Scroll */
+#ifndef BUTTON6_PRESSED
+#define BUTTON6_PRESSED  000400000000L
+#endif
+#ifndef BUTTON7_PRESSED
+#define BUTTON7_PRESSED  001000000000L
 #endif
 
 cosh_wm_t wm = {.count = 0,.focus_idx = -1 };
@@ -49,8 +57,9 @@ void wm_init(void)
                 init_color(COLOR_BLUE, 0, 0, 666);
 
         /* Enable Click and Scroll Wheel */
-        mousemask(BUTTON1_PRESSED | BUTTON1_CLICKED | BUTTON4_PRESSED |
-                  BUTTON5_PRESSED, NULL);
+        mousemask(BUTTON1_PRESSED | BUTTON1_CLICKED |
+                  BUTTON4_PRESSED | BUTTON5_PRESSED |
+                  BUTTON6_PRESSED | BUTTON7_PRESSED, NULL);
 
         init_pair(CP_TOS_STD, COLOR_BLUE, COLOR_WHITE);
         init_pair(CP_TOS_HDR, COLOR_WHITE, COLOR_BLUE);
@@ -363,13 +372,12 @@ void win_handle_mouse(void)
         for (int i = wm.count - 1; i >= 0; i--) {
                 cosh_win_t *w = wm.stack[i];
 
-                /* Check if mouse is within window boundaries */
                 if (ev.y >= w->y && ev.y < (w->y + w->h) &&
                     ev.x >= w->x && ev.x < (w->x + w->w)) {
 
                         win_raise(i);
+                        w->last_seq = WIN_SEQ_NONE;     /* Reset setiap event baru */
 
-                        /* Handle Button 1 (Close Button) */
                         if (ev.bstate & (BUTTON1_PRESSED | BUTTON1_CLICKED)) {
                                 if (!(w->flags & WIN_FLAG_LOCKED)
                                     && ev.y == w->y && ev.x >= (w->x + w->w - 4)
@@ -377,19 +385,26 @@ void win_handle_mouse(void)
                                         win_destroy_focused();
                                         return;
                                 }
-
                                 if (w->input_cb)
                                         w->input_cb(w, KEY_MOUSE);
                         }
-                        /* Handle Scroll Wheel Up -> Translate to KEY_UP */
+                        /* DISTINGUISH SCROLL EVENTS */
                         else if (ev.bstate & BUTTON4_PRESSED) {
+                                w->last_seq = WIN_MOUSE_SCROLL_UP;
                                 if (w->input_cb)
-                                        w->input_cb(w, KEY_UP);
-                        }
-                        /* Handle Scroll Wheel Down -> Translate to KEY_DOWN */
-                        else if (ev.bstate & BUTTON5_PRESSED) {
+                                        w->input_cb(w, (int)w->last_seq);
+                        } else if (ev.bstate & BUTTON5_PRESSED) {
+                                w->last_seq = WIN_MOUSE_SCROLL_DOWN;
                                 if (w->input_cb)
-                                        w->input_cb(w, KEY_DOWN);
+                                        w->input_cb(w, (int)w->last_seq);
+                        } else if (ev.bstate & BUTTON6_PRESSED) {
+                                w->last_seq = WIN_MOUSE_SCROLL_LEFT;
+                                if (w->input_cb)
+                                        w->input_cb(w, (int)w->last_seq);
+                        } else if (ev.bstate & BUTTON7_PRESSED) {
+                                w->last_seq = WIN_MOUSE_SCROLL_RIGHT;
+                                if (w->input_cb)
+                                        w->input_cb(w, (int)w->last_seq);
                         }
 
                         win_needs_redraw = 1;

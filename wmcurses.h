@@ -28,7 +28,14 @@ typedef enum {
         WIN_OPT_TICK = 8
 } win_opt_t;
 
-/* TOS-inspired Color Pairs */
+typedef enum {
+    WIN_SEQ_NONE = 0,
+    WIN_MOUSE_SCROLL_UP    = 0x2001,
+    WIN_MOUSE_SCROLL_DOWN  = 0x2002,
+    WIN_MOUSE_SCROLL_LEFT  = 0x2003,
+    WIN_MOUSE_SCROLL_RIGHT = 0x2004
+} win_seq_t;
+
 #define CP_TOS_STD	1       /* Blue on White */
 #define CP_TOS_HDR	2       /* White on Blue (Focused) */
 #define CP_TOS_ACC	3       /* Red on White (Widgets) */
@@ -44,27 +51,28 @@ typedef void (*input_fn)(struct cosh_win * win, int ch);
 typedef void (*tick_fn)(struct cosh_win * win);
 
 typedef struct cosh_win {
-        WINDOW *ptr;
-        char title[32];
-        int x, y, w, h;
-        int vw, vh;
-        int rx, ry, rw, rh;     /* Restoration coordinates for fullscreen toggle */
-        int active;
-        int dirty;
-        int color_pair;
-        int flags;
-        int fg, bg;             /* Cached colors for dynamic init */
-        void *priv;
-        destroy_fn destroy_cb;
-        render_fn render_cb;
-        input_fn input_cb;
-        tick_fn tick_cb;
+        WINDOW		*ptr;
+        char		title[32];
+        int		x, y, w, h;
+        int		vw, vh;
+        int		rx, ry, rw, rh;     /* Restoration coordinates for fullscreen toggle */
+        int		active;
+        int		dirty;
+        int		color_pair;
+        int		flags;
+        int		fg, bg;             /* Cached colors for dynamic init */
+        void		*priv;
+        destroy_fn	destroy_cb;
+        render_fn	render_cb;
+        input_fn	input_cb;
+	win_seq_t	last_seq;
+        tick_fn		tick_cb;
 } cosh_win_t;
 
 typedef struct {
-        cosh_win_t *stack[WIN_MAX];
-        int count;
-        int focus_idx;
+        cosh_win_t	*stack[WIN_MAX];
+        int		count;
+        int		focus_idx;
 } cosh_wm_t;
 
 extern cosh_wm_t wm;
