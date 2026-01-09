@@ -8,4 +8,6 @@
 #define TICK_DELAY (1000 / TARGET_FPS)
 #define WORKDIR		".cosh" /* all workdir state folder */
 
+#define MODIFIER_KEY    27      /* ESC / ALT */
+
 #endif /* CONFIGURATION_H */

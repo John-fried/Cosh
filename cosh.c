@@ -64,24 +64,33 @@ static void dispatch_input(int ch)
 {
         cosh_win_t *f = (wm.focus_idx >= 0) ? wm.stack[wm.focus_idx] : NULL;
 
-        if (ch == 27) {         /* ESC sequence handling */
+        if (ch == MODIFIER_KEY) {         
                 int next = getch();
                 switch (next) {
-                case 'f':
-                case 'F':
-                        if (f)
-                                win_toggle_fullscreen(f);
+                /* Window Management */
+                case 'f': case 'F':
+                        if (f) win_toggle_fullscreen(f);
                         return;
-                case 'w':
-                case 'W':      /* Alt + W: Enlarge */
-                        win_resize_focused(1, 2);
+                case 'w': win_resize_focused(1, 2); return;
+                case 'n': win_resize_focused(-1, -2); return;
+                case 'q': case 'Q':
+                        win_destroy_focused();
                         return;
-                case 'n':
-                case 'N':      /* Alt + N: Shrink */
-                        win_resize_focused(-1, -2);
+
+                /* Navigation & Apps */
+                case 'p': case 'P':
+                        win_spawn_palette();
                         return;
+  
+                /* Movement */
+                case 'h': win_move_focused(0, -2); return;
+                case 'l': win_move_focused(0, 2); return;
+		case 'k': win_move_focused(-1, 0); return;
+                case 'j': win_move_focused(1, 0); return;
+               
+                /* for unfocus */
                 case ERR:
-                case 27:
+                case CTRL('a'):
                         wm.focus_idx = -1;
                         for (int i = 0; i < wm.count; i++)
                                 wm.stack[i]->dirty = 1;
@@ -94,35 +103,15 @@ static void dispatch_input(int ch)
         case KEY_MOUSE:
                 win_handle_mouse();
                 break;
-        case '\t':
-                if (wm.count > 1)
-                        win_raise(0);
-                break;
-        case CTRL('p'):
-                win_spawn_palette();
-                break;
-        case CTRL('w'):
-                win_move_focused(-1, 0);
-                break;
-        case CTRL('s'):
-                win_move_focused(1, 0);
-                break;
-        case CTRL('a'):
-                win_move_focused(0, -2);
-                break;
-        case CTRL('d'):
-                win_move_focused(0, 2);
-                break;
-        case CTRL('q'):
-                win_destroy_focused();
-                break;
+	case '\t':
+		if (wm.count > 1)
+			win_raise(0);
+		break;
         default:
-                if (f) {
-                        if (f->input_cb) {
-                                f->input_cb(f, ch);
-                                f->dirty = 1;
-                        }
-                } else {
+                if (f && f->input_cb) {
+                        f->input_cb(f, ch);
+                        f->dirty = 1;
+                } else if (!f) {
                         win_vibrate();
                 }
                 break;
