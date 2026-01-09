@@ -21,17 +21,17 @@ void cleanup_empty_files(const char *dirpath, int *total_deleted)
 
         if (!d) {
                 fprintf(stderr, "failed to open directory %s: %s\n",
-                                dirpath, strerror(errno));
+                        dirpath, strerror(errno));
                 return;
         }
 
         while ((entry = readdir(d)) != NULL) {
                 if (strcmp(entry->d_name, ".") == 0 ||
-                        strcmp(entry->d_name, "..") == 0)
+                    strcmp(entry->d_name, "..") == 0)
                         continue;
 
                 snprintf(full_path, sizeof(full_path), "%s/%s",
-                                dirpath, entry->d_name);
+                         dirpath, entry->d_name);
 
                 if (lstat(full_path, &statbuf) == -1) {
                         perror("lstat_error");
@@ -42,11 +42,12 @@ void cleanup_empty_files(const char *dirpath, int *total_deleted)
                         cleanup_empty_files(full_path, total_deleted);
                 else if (S_ISREG(statbuf.st_mode) && statbuf.st_size == 0) {
                         if (unlink(full_path) == 0) {
-                                printf("deleted: %s/%s\n", dirpath, entry->d_name);
+                                printf("deleted: %s/%s\n", dirpath,
+                                       entry->d_name);
                                 (*total_deleted)++;
                         } else {
-                                printf("failed to delete file: %s (%s)\n", entry->d_name,
-                                                strerror(errno));
+                                printf("failed to delete file: %s (%s)\n",
+                                       entry->d_name, strerror(errno));
                         }
                 }
         }

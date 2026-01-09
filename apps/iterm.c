@@ -15,7 +15,6 @@
 #include <vterm.h>
 #include <utmp.h>
 
-
 /* * TERMINAL EMULATOR CORE
  * Implements a grid-based terminal state machine with scrolling support.
  */
@@ -23,10 +22,10 @@
 #define TERM_MAX_ROWS 1024
 
 typedef struct {
-        char	*grid[TERM_MAX_ROWS];
-        int	rows, cols;
-        int	cx, cy;             /* Virtual cursor position */
-        int	scroll_top;         /* Current viewport top-most line */
+        char *grid[TERM_MAX_ROWS];
+        int rows, cols;
+        int cx, cy;             /* Virtual cursor position */
+        int scroll_top;         /* Current viewport top-most line */
 } term_emu_t;
 
 static term_emu_t *term_create(int r, int c)
@@ -59,70 +58,86 @@ void app_iterm_input(cosh_win_t *win, int ch)
         if (!st || !st->is_running || !st->emu)
                 return;
 
-	if (ch == WIN_MOUSE_SCROLL_UP) {
-		if (st->emu->scroll_top > (st->emu->cy - st->emu->rows + win->vh) && st->emu->scroll_top > 0) 
-			st->emu->scroll_top--;
-		win->dirty = 1;
-		return; 
-	}
+        if (ch == WIN_MOUSE_SCROLL_UP) {
+                if (st->emu->scroll_top >
+                    (st->emu->cy - st->emu->rows + win->vh)
+                    && st->emu->scroll_top > 0)
+                        st->emu->scroll_top--;
+                win->dirty = 1;
+                return;
+        }
 
-	if (ch == WIN_MOUSE_SCROLL_DOWN) {
-		if (st->emu->scroll_top < st->emu->cy)
-			st->emu->scroll_top++;
-		win->dirty = 1;
-		return;
-	}
+        if (ch == WIN_MOUSE_SCROLL_DOWN) {
+                if (st->emu->scroll_top < st->emu->cy)
+                        st->emu->scroll_top++;
+                win->dirty = 1;
+                return;
+        }
 
         VTermModifier mod = VTERM_MOD_NONE;
 
         if (ch >= KEY_MIN && ch <= KEY_MAX) {
                 VTermKey key = VTERM_KEY_NONE;
                 switch (ch) {
-                case KEY_UP:        key = VTERM_KEY_UP;        break;
-                case KEY_DOWN:      key = VTERM_KEY_DOWN;      break;
-                case KEY_LEFT:      key = VTERM_KEY_LEFT;      break;
-                case KEY_RIGHT:     key = VTERM_KEY_RIGHT;     break;
-                case KEY_BACKSPACE: key = VTERM_KEY_BACKSPACE; break;
+                case KEY_UP:
+                        key = VTERM_KEY_UP;
+                        break;
+                case KEY_DOWN:
+                        key = VTERM_KEY_DOWN;
+                        break;
+                case KEY_LEFT:
+                        key = VTERM_KEY_LEFT;
+                        break;
+                case KEY_RIGHT:
+                        key = VTERM_KEY_RIGHT;
+                        break;
+                case KEY_BACKSPACE:
+                        key = VTERM_KEY_BACKSPACE;
+                        break;
                 case KEY_ENTER:
-                case 10:            key = VTERM_KEY_ENTER;     break;
+                case 10:
+                        key = VTERM_KEY_ENTER;
+                        break;
                 }
-                
+
                 if (key != VTERM_KEY_NONE) {
                         vterm_keyboard_key(st->vt, key, mod);
                 }
-        } else if (ch < 0x110000) { 
+        } else if (ch < 0x110000) {
                 vterm_keyboard_unichar(st->vt, (uint32_t) ch, mod);
         }
 
-	/* flush to pty */
+        /* flush to pty */
         char buf[64];
         size_t len = vterm_output_read(st->vt, buf, sizeof(buf));
         if (len > 0)
-                if (write(st->fd, buf, len) < 0) { 
-			// handle error if necessary
+                if (write(st->fd, buf, len) < 0) {
+                        // handle error if necessary
                 }
 }
 
 static int screen_pushline(int cols, const VTermScreenCell *cells, void *user)
 {
-        cosh_win_t *win = (cosh_win_t *)user;
-        iterm_state_t *st = (iterm_state_t *)win->priv;
+        cosh_win_t *win = (cosh_win_t *) user;
+        iterm_state_t *st = (iterm_state_t *) win->priv;
         term_emu_t *t = st->emu;
 
         char *old_line = t->grid[0];
         for (int i = 0; i < t->rows - 1; i++)
                 t->grid[i] = t->grid[i + 1];
-        
+
         t->grid[t->rows - 1] = old_line;
 
         for (int i = 0; i < cols && i < t->cols; i++) {
-                t->grid[t->rows - 1][i] = cells[i].chars[0] ? (char)cells[i].chars[0] : ' ';
+                t->grid[t->rows - 1][i] =
+                    cells[i].chars[0] ? (char)cells[i].chars[0] : ' ';
         }
         t->grid[t->rows - 1][cols < t->cols ? cols : t->cols] = '\0';
 
-        if (t->cy < t->rows) t->cy++;
+        if (t->cy < t->rows)
+                t->cy++;
 
-	st->emu->scroll_top = t->cy; 
+        st->emu->scroll_top = t->cy;
 
         return 1;
 }
@@ -152,37 +167,42 @@ void app_iterm_tick(cosh_win_t *win)
                 // Tulis ke vterm. Ini akan otomatis memicu callback screen_damage
                 // yang kemudian mengeset win->dirty = 1
                 vterm_input_write(st->vt, buf, n);
-		st->emu->scroll_top = st->emu->cy;
+                st->emu->scroll_top = st->emu->cy;
         } else if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
                 st->is_running = 0;
         }
 }
 
-void app_iterm_on_resize(cosh_win_t *win, int vh, int vw) {
-    iterm_state_t *st = (iterm_state_t *)win->priv;
-    if (!st) return;
+void app_iterm_on_resize(cosh_win_t *win, int vh, int vw)
+{
+        iterm_state_t *st = (iterm_state_t *) win->priv;
+        if (!st)
+                return;
 
-    struct winsize ws = {.ws_row = vh, .ws_col = vw};
-    ioctl(st->fd, TIOCSWINSZ, &ws);
+        struct winsize ws = {.ws_row = vh,.ws_col = vw };
+        ioctl(st->fd, TIOCSWINSZ, &ws);
 
-    vterm_set_size(st->vt, vh, vw);
-    
-    win->dirty = 1;
+        vterm_set_size(st->vt, vh, vw);
+
+        win->dirty = 1;
 }
 
 void app_iterm_render(cosh_win_t *win)
 {
         iterm_state_t *st = (iterm_state_t *) win->priv;
-        if (!st || !st->emu) return;
+        if (!st || !st->emu)
+                return;
 
         for (int row = 0; row < win->vh; row++) {
                 int absolute_row = st->emu->scroll_top + row;
 
                 if (absolute_row < st->emu->cy) {
-                        int history_idx = (st->emu->rows - (st->emu->cy - absolute_row));
-                        
+                        int history_idx =
+                            (st->emu->rows - (st->emu->cy - absolute_row));
+
                         if (history_idx >= 0 && history_idx < st->emu->rows) {
-                                mvwprintw(win->ptr, row + 1, 2, "%.*s", win->vw, st->emu->grid[history_idx]);
+                                mvwprintw(win->ptr, row + 1, 2, "%.*s", win->vw,
+                                          st->emu->grid[history_idx]);
                         }
                 } else {
                         VTermPos pos;
@@ -191,9 +211,13 @@ void app_iterm_render(cosh_win_t *win)
                         if (pos.row >= 0 && pos.row < win->vh) {
                                 for (pos.col = 0; pos.col < win->vw; pos.col++) {
                                         VTermScreenCell cell;
-                                        if (vterm_screen_get_cell(st->vts, pos, &cell)) {
-                                                uint32_t c = cell.chars[0] ? cell.chars[0] : ' ';
-                                                mvwaddch(win->ptr, row + 1, pos.col + 2, c);
+                                        if (vterm_screen_get_cell
+                                            (st->vts, pos, &cell)) {
+                                                uint32_t c =
+                                                    cell.chars[0] ? cell.
+                                                    chars[0] : ' ';
+                                                mvwaddch(win->ptr, row + 1,
+                                                         pos.col + 2, c);
                                         }
                                 }
                         }
@@ -204,12 +228,14 @@ void app_iterm_render(cosh_win_t *win)
         if (st->emu->scroll_top >= st->emu->cy) {
                 VTermPos curpos;
                 vterm_state_get_cursorpos(vterm_obtain_state(st->vt), &curpos);
-                
-                int cursor_screen_row = (curpos.row + st->emu->cy) - st->emu->scroll_top;
-                
+
+                int cursor_screen_row =
+                    (curpos.row + st->emu->cy) - st->emu->scroll_top;
+
                 if (cursor_screen_row >= 0 && cursor_screen_row < win->vh) {
                         wattron(win->ptr, A_REVERSE);
-                        mvwaddch(win->ptr, cursor_screen_row + 1, curpos.col + 2, ' ');
+                        mvwaddch(win->ptr, cursor_screen_row + 1,
+                                 curpos.col + 2, ' ');
                         wattroff(win->ptr, A_REVERSE);
                 }
         }
@@ -237,7 +263,7 @@ void win_spawn_iterm(void)
         iterm_state_t *st = calloc(1, sizeof(iterm_state_t));
 
         // 1. Init VTerm dengan ukuran virtual window
-	st->emu = term_create(TERM_MAX_ROWS, win->vw); 
+        st->emu = term_create(TERM_MAX_ROWS, win->vw);
         st->vt = vterm_new(win->vh, win->vw);
         st->vts = vterm_obtain_screen(st->vt);
         vterm_screen_set_callbacks(st->vts, &screen_cbs, win);

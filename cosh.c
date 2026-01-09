@@ -64,31 +64,47 @@ static void dispatch_input(int ch)
 {
         cosh_win_t *f = (wm.focus_idx >= 0) ? wm.stack[wm.focus_idx] : NULL;
 
-        if (ch == MODIFIER_KEY) {         
+        if (ch == MODIFIER_KEY) {
                 int next = getch();
                 switch (next) {
-                /* Window Management */
-                case 'f': case 'F':
-                        if (f) win_toggle_fullscreen(f);
+                        /* Window Management */
+                case 'f':
+                case 'F':
+                        if (f)
+                                win_toggle_fullscreen(f);
                         return;
-                case 'w': win_resize_focused(1, 2); return;
-                case 'n': win_resize_focused(-1, -2); return;
-                case 'q': case 'Q':
+                case 'w':
+                        win_resize_focused(1, 2);
+                        return;
+                case 'n':
+                        win_resize_focused(-1, -2);
+                        return;
+                case 'q':
+                case 'Q':
                         win_destroy_focused();
                         return;
 
-                /* Navigation & Apps */
-                case 'p': case 'P':
+                        /* Navigation & Apps */
+                case 'p':
+                case 'P':
                         win_spawn_palette();
                         return;
-  
-                /* Movement */
-                case 'h': win_move_focused(0, -2); return;
-                case 'l': win_move_focused(0, 2); return;
-		case 'k': win_move_focused(-1, 0); return;
-                case 'j': win_move_focused(1, 0); return;
-               
-                /* for unfocus */
+
+                        /* Movement */
+                case 'h':
+                        win_move_focused(0, -2);
+                        return;
+                case 'l':
+                        win_move_focused(0, 2);
+                        return;
+                case 'k':
+                        win_move_focused(-1, 0);
+                        return;
+                case 'j':
+                        win_move_focused(1, 0);
+                        return;
+
+                        /* for unfocus */
                 case ERR:
                 case CTRL('a'):
                         wm.focus_idx = -1;
@@ -103,10 +119,10 @@ static void dispatch_input(int ch)
         case KEY_MOUSE:
                 win_handle_mouse();
                 break;
-	case '\t':
-		if (wm.count > 1)
-			win_raise(0);
-		break;
+        case '\t':
+                if (wm.count > 1)
+                        win_raise(0);
+                break;
         default:
                 if (f && f->input_cb) {
                         f->input_cb(f, ch);
@@ -150,7 +166,7 @@ int boot(void)
         log_trace("preparing software...");
         register_app("Adams Terminal", win_spawn_iterm);
         register_app("Palette", win_spawn_palette);
-	register_app("Guide", win_spawn_help);
+        register_app("Guide", win_spawn_help);
 
         log_trace("rendering window...");
         wm_init();              /* Init TUI */
@@ -160,11 +176,11 @@ int boot(void)
 
 void shutdown(void)
 {
-	int dummy;
+        int dummy;
 
-	free(wstate);
-	cleanup_empty_files(WORKDIR, &dummy);
-	endwin();
+        free(wstate);
+        cleanup_empty_files(WORKDIR, &dummy);
+        endwin();
 }
 
 int get_workdir_usage(void)
@@ -219,23 +235,26 @@ int main(void)
 
         win_spawn_help();
 
-	while (1) {
-	    if (win_needs_redraw) {
-		win_refresh_all();
-	    }
+        while (1) {
+                if (terminal_resized)
+                        win_handle_resize();
 
-	    if (poll(&pfd, 1, TICK_DELAY) > 0) {
-		ch = getch();
-		if (ch == CTRL('/')) {
-		    if (confirm_shutdown()) break;
-		    win_needs_redraw = 1;
-		    continue;
-		}
-		dispatch_input(ch);
-	    } else {
-		win_needs_redraw = 1;
-	    }
-	}
+                if (win_needs_redraw)
+                        win_refresh_all();
+
+                if (poll(&pfd, 1, TICK_DELAY) > 0) {
+                        ch = getch();
+                        if (ch == CTRL('/')) {
+                                if (confirm_shutdown())
+                                        break;
+                                win_needs_redraw = 1;
+                                continue;
+                        }
+                        dispatch_input(ch);
+                } else {
+                        win_needs_redraw = 1;
+                }
+        }
 
         shutdown();
         return 0;
