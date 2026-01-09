@@ -3,6 +3,7 @@
 
 #include "wmcurses.h"
 #include "log.h"
+#include "util.h"
 
 #include <poll.h>
 #include <errno.h>

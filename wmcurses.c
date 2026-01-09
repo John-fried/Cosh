@@ -106,17 +106,16 @@ cosh_win_t *win_create(int h, int w, int flags)
         win->y = ny;
         win->w = w;
         win->h = h;
-        win->vw = w - 4;        // Margin kiri 2, kanan 2
-        win->vh = h - 2;        // Margin atas 1, bawah 1
+        win->vw = w - 4;
+	win->vh = h - 2;
         win->flags = flags;
         win->dirty = 1;
         win->fg = -1;
         win->bg = -1;
 
         keypad(win->ptr, TRUE);
-        scrollok(win->ptr, TRUE);       // Mengizinkan kursor pindah ke baris baru saat mentok kanan/bawah
-        idlok(win->ptr, TRUE);  // Optimasi hardware line insertion/deletion
-
+        scrollok(win->ptr, TRUE);
+        idlok(win->ptr, TRUE);
         wm.stack[wm.count] = win;
         win_apply_colors(win, wm.count);
 

@@ -1,7 +1,7 @@
 # COSH - C-Operating System Shell
 
 CC      := gcc
-CFLAGS  := -Wall -Wextra -O3 -march=native -std=gnu99 -DLOG_USE_COLOR
+CFLAGS  := -Wall -Wextra -Werror -pedantic -O3 -march=native -std=gnu99 -DLOG_USE_COLOR
 LDFLAGS := -lncurses -lvterm
 
 # Installation Paths
@@ -11,6 +11,7 @@ DESTDIR ?=
 
 # Directories
 APP_DIR := apps
+UTIL_DIR := utils
 OBJ_DIR := obj
 
 # Files
@@ -19,11 +20,11 @@ TARGET  := cosh
 # Core source files
 CORE_SRCS := $(wildcard ./*.c)
 
-# Dynamic apps discovery (Wildcard apps/*.c)
 APP_SRCS  := $(wildcard $(APP_DIR)/*.c)
+UTIL_SRCS := $(wildcard $(UTIL_DIR)/*.c)
 
 # Combine all sources
-SRCS      := $(CORE_SRCS) $(APP_SRCS)
+SRCS      := $(CORE_SRCS) $(UTIL_SRCS) $(APP_SRCS)
 
 # Generate object paths in obj/ directory
 OBJS      := $(SRCS:%.c=$(OBJ_DIR)/%.o)

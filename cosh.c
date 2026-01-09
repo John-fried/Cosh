@@ -156,7 +156,7 @@ static void dispatch_input(int ch)
         win_needs_redraw = 1;
 }
 
-int boot()
+int boot(void)
 {
         struct stat sb;
 
@@ -194,6 +194,15 @@ int boot()
         return 0;
 }
 
+void shutdown(void)
+{
+	int dummy;
+
+	free(wstate);
+	cleanup_empty_files(WORKDIR, &dummy);
+	endwin();
+}
+
 int get_workdir_usage(void)
 {
         struct stat st;
@@ -215,7 +224,6 @@ int get_workdir_usage(void)
         char path[1024];
 
         while ((de = readdir(d)) != NULL) {
-                // Abaikan "." dan ".."
                 if (strcmp(de->d_name, ".") == 0
                     || strcmp(de->d_name, "..") == 0)
                         continue;
@@ -238,8 +246,7 @@ int get_workdir_usage(void)
 int main(void)
 {
         struct pollfd pfd = {.fd = 0,.events = POLLIN };
-        struct timeval tv;
-        int ch, timeout;
+        int ch;
 
         boot();
         win_spawn_iterm();
@@ -266,6 +273,6 @@ int main(void)
 	    }
 	}
 
-        endwin();
+        shutdown();
         return 0;
 }

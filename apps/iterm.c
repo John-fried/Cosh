@@ -45,55 +45,6 @@ static term_emu_t *term_create(int r, int c)
         return t;
 }
 
-static void term_scroll_internal(term_emu_t *t)
-{
-        char *tmp = t->grid[0];
-        for (int i = 0; i < t->rows - 1; i++)
-                t->grid[i] = t->grid[i + 1];
-        t->grid[t->rows - 1] = tmp;
-        memset(t->grid[t->rows - 1], ' ', t->cols);
-        if (t->cy > 0)
-                t->cy--;
-}
-
-static void term_write_char(term_emu_t *t, char c, int vh)
-{
-        if (c == '\r') {
-                t->cx = 0;
-                return;
-        }
-        if (c == '\n') {
-                t->cx = 0;
-                t->cy++;
-                if (t->cy >= t->rows)
-                        term_scroll_internal(t);
-                /* Auto-follow cursor if it moves out of current view */
-                if (t->cy >= t->scroll_top + vh)
-                        t->scroll_top = t->cy - vh + 1;
-                return;
-        }
-        if (c == '\b' || c == 127) {
-                if (t->cx > 0)
-                        t->cx--;
-                return;
-        }
-        if (c == '\t') {
-                t->cx = (t->cx + 8) & ~7;
-                return;
-        }
-
-        if (t->cx >= t->cols) {
-                t->cx = 0;
-                t->cy++;
-                if (t->cy >= t->rows)
-                        term_scroll_internal(t);
-                if (t->cy >= t->scroll_top + vh)
-                        t->scroll_top = t->cy - vh + 1;
-        }
-
-        t->grid[t->cy][t->cx++] = c;
-}
-
 /* --- Iterm State --- */
 
 typedef struct {
@@ -105,82 +56,6 @@ typedef struct {
         char cwd[128];
         int is_running;
 } iterm_state_t;
-
-static void iterm_jit_exec(iterm_state_t *st, const char *code, int vh)
-{
-        FILE *fp = fopen(JIT_SRC, "w");
-        if (!fp)
-                return;
-        fprintf(fp,
-                "#include <stdio.h>\n#include <stdlib.h>\nvoid _run() { %s }\n",
-                code);
-        fclose(fp);
-
-        if (system
-            ("gcc -O2 -fPIC -shared -o " JIT_BIN " " JIT_SRC " > " JIT_LOG
-             " 2>&1") == 0) {
-                void *h = dlopen(JIT_BIN, RTLD_NOW);
-                if (h) {
-                        void (*fn)() = dlsym(h, "_run");
-                        if (fn)
-                                fn();
-                        dlclose(h);
-                }
-        } else {
-                char buf[256];
-                FILE *l = fopen(JIT_LOG, "r");
-                while (l && fgets(buf, sizeof(buf), l)) {
-                        for (int i = 0; buf[i]; i++)
-                                term_write_char(st->emu, buf[i], vh);
-                }
-                if (l)
-                        fclose(l);
-        }
-        unlink(JIT_SRC);
-        unlink(JIT_BIN);
-}
-
-static void iterm_spawn_cmd(iterm_state_t *st, char *cmd)
-{
-        int master;
-        struct termios tio;
-
-        if (strncmp(cmd, "cd ", 3) == 0) {
-                if (chdir(cmd + 3) == 0)
-                        getcwd(st->cwd, sizeof(st->cwd));
-                return;
-        }
-
-        master = posix_openpt(O_RDWR | O_NOCTTY);
-        grantpt(master);
-        unlockpt(master);
-
-        st->pid = fork();
-        if (st->pid == 0) {
-                int slave = open(ptsname(master), O_RDWR);
-                tcgetattr(slave, &tio);
-                cfmakeraw(&tio);
-                tcsetattr(slave, TCSANOW, &tio);
-
-                dup2(slave, 0);
-                dup2(slave, 1);
-                dup2(slave, 2);
-                close(slave);
-                close(master);
-
-                setsid();
-                ioctl(0, TIOCSCTTY, 1);
-
-                setenv("TERM", "vt100", 1);
-                char *args[] = { "/bin/sh", "-c", cmd, NULL };
-                execv(args[0], args);
-                exit(1);
-        }
-
-        st->fd = master;
-        st->is_running = 1;
-        fcntl(st->fd, F_SETFL, O_NONBLOCK);
-}
 
 /* --- Callbacks --- */
 
@@ -221,11 +96,11 @@ void app_iterm_input(cosh_win_t *win, int ch)
                 if (key != VTERM_KEY_NONE) {
                         vterm_keyboard_key(st->vt, key, mod);
                 }
-        } else if (ch < 0x110000) { /* Pastikan hanya karakter valid yang dikirim */
+        } else if (ch < 0x110000) { 
                 vterm_keyboard_unichar(st->vt, (uint32_t) ch, mod);
         }
 
-        /* 3. FLUSH KE PTY */
+	/* flush to pty */
         char buf[64];
         size_t len = vterm_output_read(st->vt, buf, sizeof(buf));
         if (len > 0)
@@ -261,7 +136,6 @@ static int screen_pushline(int cols, const VTermScreenCell *cells, void *user)
 static int screen_damage(VTermRect rect, void *user)
 {
         (void)rect;
-        // Memberitahu wmcurses bahwa window ini perlu di-render ulang
         ((cosh_win_t *) user)->dirty = 1;
         return 1;
 }
