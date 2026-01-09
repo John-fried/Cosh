@@ -10,21 +10,21 @@
 #include <sys/stat.h>
 #include <dirent.h>
 
-#define WORKDIR		".cosh" 
+#define WORKDIR		".cosh"
 
 struct workdir_state {
-	long cached_size;
-	time_t last_mtime;
-	int cached; /* Flag to avoid pointer access to not existsten memory */
+        long cached_size;
+        time_t last_mtime;
+        int cached;             /* Flag to avoid pointer access to not existsten memory */
 };
 
 int get_workdir_usage(void);
 
-typedef struct		app_entry {
-	char		*name;
-	void		(*spawn)(void);
-	int		score; /* for levenshtein */
-	struct		app_entry *next; /* for linked list */
+typedef struct app_entry {
+        char *name;
+        void (*spawn)(void);
+        int score;              /* for levenshtein */
+        struct app_entry *next; /* for linked list */
 } app_entry_t;
 
 extern app_entry_t *app_registry;
@@ -33,4 +33,4 @@ extern struct workdir_state *wstate;
 
 void register_app(const char *name, void (*spawn)(void));
 
-#endif /* COSH_H */
+#endif                          /* COSH_H */

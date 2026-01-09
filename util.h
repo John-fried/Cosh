@@ -3,4 +3,4 @@
 
 int levenshtein_distance(const char *s, const char *t);
 
-#endif /* UTIL_H */
+#endif                          /* UTIL_H */
