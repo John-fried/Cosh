@@ -36,10 +36,13 @@ typedef enum {
     WIN_MOUSE_SCROLL_RIGHT = 0x2004
 } win_seq_t;
 
+#define COLOR_GREY 8
+
 #define CP_TOS_STD	1       /* Blue on White */
-#define CP_TOS_HDR	2       /* White on Blue (Focused) */
+#define CP_TOS_HDR	2       /* Green oh White (Focused) */
 #define CP_TOS_ACC	3       /* Red on White (Widgets) */
 #define CP_TOS_BAR	4       /* White on Blue (Status) */
+#define CP_TOS_HDR_UNF	5	/* White on blue (unfocus) */
 
 #define CP_WIN_START	10
 

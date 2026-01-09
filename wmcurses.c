@@ -65,6 +65,7 @@ void wm_init(void)
         init_pair(CP_TOS_HDR, COLOR_WHITE, COLOR_BLUE);
         init_pair(CP_TOS_ACC, COLOR_RED, COLOR_WHITE);
         init_pair(CP_TOS_BAR, COLOR_WHITE, COLOR_BLUE);
+        init_pair(CP_TOS_HDR_UNF, COLOR_WHITE, COLOR_GREY);
 
         wbkgd(stdscr, COLOR_PAIR(CP_TOS_STD));
 }
@@ -211,14 +212,15 @@ void win_setopt(cosh_win_t *win, win_opt_t opt, ...)
         win->dirty = 1;
 }
 
+/** the core of window */
 static void win_render_frame(cosh_win_t *win, int is_focused)
 {
-        int hdr_color = is_focused ? CP_TOS_HDR : win->color_pair;
+        int hdr_color = is_focused ? CP_TOS_HDR : CP_TOS_HDR_UNF;
 
         wattron(win->ptr, COLOR_PAIR(win->color_pair));
-        box(win->ptr, 0, 0);
-
+	box(win->ptr, 0, 0); 
         wattron(win->ptr, COLOR_PAIR(hdr_color));
+
         for (int i = 1; i < win->w - 1; i++)
                 mvwaddch(win->ptr, 0, i, ' ');
 
