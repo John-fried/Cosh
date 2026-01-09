@@ -129,32 +129,28 @@ cosh_win_t *win_create(int h, int w, int flags)
 void win_resize_focused(int dh, int dw)
 {
         cosh_win_t *w;
-
-        if (wm.focus_idx < 0)
-                return;
+        if (wm.focus_idx < 0) return;
 
         w = wm.stack[wm.focus_idx];
-
-        if (w->flags & (WIN_FLAG_LOCKED | WIN_FLAG_FULLSCREEN))
-                return;
+        if (w->flags & (WIN_FLAG_LOCKED | WIN_FLAG_FULLSCREEN)) return;
 
         int nh = w->h + dh;
         int nw = w->w + dw;
 
-        if (nh < 4 || nh > LINES - 1)
-                return;
-        if (nw < 10 || nw > COLS)
-                return;
-
-        if (w->y + nh > LINES - 1)
-                nh = LINES - 1 - w->y;
-        if (w->x + nw > COLS)
-                nw = COLS - w->x;
+        if (nh < 4 || nh > LINES - 1) return;
+        if (nw < 10 || nw > COLS) return;
 
         w->h = nh;
         w->w = nw;
 
+        w->vw = nw - 4;
+        w->vh = nh - 2;
+
         wresize(w->ptr, w->h, w->w);
+
+        if (w->resize_cb) {
+                w->resize_cb(w, w->vh, w->vw);
+        }
 
         w->dirty = 1;
         win_needs_redraw = 1;
@@ -205,6 +201,9 @@ void win_setopt(cosh_win_t *win, win_opt_t opt, ...)
         case WIN_OPT_TICK:
                 win->tick_cb = va_arg(ap, tick_fn);
                 break;
+	case WIN_OPT_RESIZE:
+		win->resize_cb = va_arg(ap, resize_fn);
+		break;
         }
 
         va_end(ap);

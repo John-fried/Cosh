@@ -25,7 +25,8 @@ typedef enum {
         WIN_OPT_BG = 5,
         WIN_OPT_PRIV = 6,
         WIN_OPT_DESTROY = 7,
-        WIN_OPT_TICK = 8
+        WIN_OPT_TICK = 8,
+	WIN_OPT_RESIZE = 9
 } win_opt_t;
 
 typedef enum {
@@ -51,6 +52,7 @@ struct cosh_win;
 typedef void (*render_fn)(struct cosh_win * win);
 typedef void (*destroy_fn)(void *priv);
 typedef void (*input_fn)(struct cosh_win * win, int ch);
+typedef void (*resize_fn)(struct cosh_win *win, int new_h, int new_w);
 typedef void (*tick_fn)(struct cosh_win * win);
 
 typedef struct cosh_win {
@@ -68,6 +70,7 @@ typedef struct cosh_win {
         destroy_fn	destroy_cb;
         render_fn	render_cb;
         input_fn	input_cb;
+	resize_fn	resize_cb;
 	win_seq_t	last_seq;
         tick_fn		tick_cb;
 } cosh_win_t;

@@ -158,6 +158,18 @@ void app_iterm_tick(cosh_win_t *win)
         }
 }
 
+void app_iterm_on_resize(cosh_win_t *win, int vh, int vw) {
+    iterm_state_t *st = (iterm_state_t *)win->priv;
+    if (!st) return;
+
+    struct winsize ws = {.ws_row = vh, .ws_col = vw};
+    ioctl(st->fd, TIOCSWINSZ, &ws);
+
+    vterm_set_size(st->vt, vh, vw);
+    
+    win->dirty = 1;
+}
+
 void app_iterm_render(cosh_win_t *win)
 {
         iterm_state_t *st = (iterm_state_t *) win->priv;
@@ -259,4 +271,5 @@ void win_spawn_iterm(void)
         win_setopt(win, WIN_OPT_BG, COLOR_BLACK);
         win_setopt(win, WIN_OPT_PRIV, st);
         win_setopt(win, WIN_OPT_TICK, app_iterm_tick);
+        win_setopt(win, WIN_OPT_RESIZE, app_iterm_on_resize);
 }
