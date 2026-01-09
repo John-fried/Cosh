@@ -3,6 +3,22 @@
 void win_spawn_iterm(void);
 void win_spawn_palette(void);
 
+app_entry_t *app_registry = NULL;
+int app_count = 0;
+struct workdir_state *wstate = NULL;
+
+void register_app(const char *name, void (*spawn)(void))
+{
+	app_entry_t *new_app = malloc(sizeof(app_entry_t));
+	new_app->name = strdup(name);
+	new_app->spawn = spawn;
+	new_app->score = 0;
+	new_app->next = app_registry;
+	app_registry = new_app;
+	app_count++;
+
+}
+
 void app_help_render(cosh_win_t *win)
 {
 	mvwprintw(win->ptr, 2, 2, "--- COSH SYSTEM SHORTCUTS ---");
@@ -129,6 +145,19 @@ int boot()
 	}
 	log_info("workdir is ready");
 
+	log_trace("preparing for workdir state...");
+	wstate = malloc(sizeof(*wstate));
+	if (!wstate) {
+		log_fatal("malloc for workdir state failed.");
+		return -1;
+	}
+	log_info("workdir state ready");
+
+	log_trace("preparing software...");
+	register_app("Adams Terminal", win_spawn_iterm);
+	register_app("Palette", win_spawn_palette);
+
+
 	log_trace("rendering window...");
 	wm_init(); /* Init TUI */
 
@@ -137,11 +166,40 @@ int boot()
 
 int get_workdir_usage(void)
 {
-	struct stat sb;
-	if (lstat(WORKDIR, &sb) == -1)
-		return -1;
-	else
-		return sb.st_size;	
+    struct stat st;
+    if (lstat(WORKDIR, &st) == -1) return -1;
+
+    if (wstate->cached == 1 && 
+		    st.st_mtime == wstate->last_mtime)
+	    return (int) (wstate->cached_size / 1024);
+
+    if (!S_ISDIR(st.st_mode)) return st.st_size;
+
+    DIR *d = opendir(WORKDIR);
+    if (!d) return -1;
+
+    long total_size = 0;
+    struct dirent *de;
+    char path[1024];
+
+    while ((de = readdir(d)) != NULL) {
+        // Abaikan "." dan ".."
+        if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0)
+            continue;
+
+        snprintf(path, sizeof(path), "%s/%s", WORKDIR, de->d_name);
+        
+        struct stat fst;
+        if (lstat(path, &fst) != -1) {
+            total_size += (fst.st_blocks * 512); 
+        }
+    }
+
+    closedir(d);
+    wstate->last_mtime = st.st_mtime;
+    wstate->cached_size = total_size;
+    wstate->cached = true;
+    return (int)(total_size / 1024);
 }
 
 int main(void)

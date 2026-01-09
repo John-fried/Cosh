@@ -1,11 +1,6 @@
 #include "wmcurses.h"
 #include "cosh.h"
 
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <unistd.h>
-
 /* Mouse Wheel definitions for older ncurses headers */
 #ifndef BUTTON4_PRESSED
 #define BUTTON4_PRESSED  000020000000L
@@ -99,6 +94,9 @@ cosh_win_t *win_create(int h, int w, int flags)
 	win->bg = -1;
 
 	keypad(win->ptr, TRUE);
+	scrollok(win->ptr, TRUE); // Mengizinkan kursor pindah ke baris baru saat mentok kanan/bawah
+	idlok(win->ptr, TRUE);     // Optimasi hardware line insertion/deletion
+
 	wm.stack[wm.count] = win;
 	win_apply_colors(win, wm.count);
 

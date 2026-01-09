@@ -3,6 +3,10 @@
 
 #include <ncurses.h>
 #include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
 
 #define WIN_MAX		32
 #define CTRL(c)		(((c) ^ ((((c) ^ 0x40) >> 2) & 0x10)) & 0x1f)
