@@ -1,7 +1,6 @@
 #include "../cosh.h"
 #include "../wmcurses.h"
 
-#define _XOPEN_SOURCE 600
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -16,17 +15,12 @@
 #include <vterm.h>
 #include <utmp.h>
 
-/* JIT constants */
-#define JIT_SRC		WORKDIR"/jit_temp.c"
-#define JIT_BIN		WORKDIR"/jit_temp.so"
-#define JIT_LOG		WORKDIR"/jit_temp.log"
 
 /* * TERMINAL EMULATOR CORE
  * Implements a grid-based terminal state machine with scrolling support.
  */
 
 #define TERM_MAX_ROWS 1024
-#define TERM_MAX_COLS 256
 
 typedef struct {
         char	*grid[TERM_MAX_ROWS];
