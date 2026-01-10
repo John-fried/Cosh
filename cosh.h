@@ -10,6 +10,7 @@
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <locale.h>
 
 #include "configuration.h"
 

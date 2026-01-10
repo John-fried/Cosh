@@ -139,6 +139,7 @@ static void dispatch_input(int ch)
 int boot(void)
 {
         struct stat sb;
+	setlocale(LC_ALL, "");
 
         k_log_trace("ensure workdir...");
 

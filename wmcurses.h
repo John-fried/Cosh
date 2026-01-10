@@ -1,6 +1,8 @@
 #ifndef WMCURSES_H
 #define WMCURSES_H
 
+#define _XOPEN_SOURCE_EXTENDED
+#include <curses.h>
 #include <ncurses.h>
 #include <ncurses/panel.h>
 #include <stdarg.h>

@@ -277,9 +277,14 @@ void win_setopt(cosh_win_t *win, win_opt_t opt, ...)
 static void win_render_frame(cosh_win_t *win, int is_focused)
 {
         int hdr_color = is_focused ? CP_TOS_HDR : CP_TOS_HDR_UNF;
+	cchar_t 
+		ls = {0, {L"║"}, 0}, rs = {0, {L"║"}, 0},
+		ts = {0, {L"═"}, 0}, bs = {0, {L"═"}, 0},
+		tl = {0, {L"╔"}, 0}, tr = {0, {L"╗"}, 0},
+		bl = {0, {L"╚"}, 0}, br = {0, {L"╝"}, 0};
 
         wattron(win->ptr, COLOR_PAIR(win->color_pair));
-        box(win->ptr, 0, 0);
+	wborder_set(win->ptr, &ls, &rs, &ts, &bs, &tl, &tr, &bl, &br);
         wattron(win->ptr, COLOR_PAIR(hdr_color));
 
         for (int i = 1; i < win->w - 1; i++)
