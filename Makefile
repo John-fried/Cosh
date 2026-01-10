@@ -12,19 +12,20 @@ DESTDIR ?=
 # Directories
 APP_DIR := apps
 UTIL_DIR := utils
-OBJ_DIR := obj
+KERNEL_DIR := kernel
+OBJ_DIR := .obj
 
 # Files
 TARGET  := cosh
 
 # Core source files
 CORE_SRCS := $(wildcard ./*.c)
-
 APP_SRCS  := $(wildcard $(APP_DIR)/*.c)
 UTIL_SRCS := $(wildcard $(UTIL_DIR)/*.c)
+KERNEL_SRCS := $(wildcard $(KERNEL_DIR)/*.c)
 
 # Combine all sources
-SRCS      := $(CORE_SRCS) $(UTIL_SRCS) $(APP_SRCS)
+SRCS      := $(KERNEL_SRCS) $(CORE_SRCS) $(UTIL_SRCS) $(APP_SRCS)
 
 # Generate object paths in obj/ directory
 OBJS      := $(SRCS:%.c=$(OBJ_DIR)/%.o)

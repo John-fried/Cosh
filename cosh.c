@@ -10,6 +10,7 @@ struct workdir_state *wstate = NULL;
 
 void register_app(const char *name, void (*spawn)(void))
 {
+	k_log_trace("  registered app: %s", name);
         app_entry_t *new_app = malloc(sizeof(app_entry_t));
         new_app->name = strdup(name);
         new_app->spawn = spawn;
@@ -139,36 +140,36 @@ int boot(void)
 {
         struct stat sb;
 
-        log_trace("ensure workdir...");
+        k_log_trace("ensure workdir...");
 
         if (lstat(WORKDIR, &sb) == -1) {
-                log_info("workdir uninitialized: %s", strerror(errno));
+                k_log_info("workdir uninitialized: %s", strerror(errno));
                 mkdir(WORKDIR, 0755);
         } else {
                 if (S_ISREG(sb.st_mode)) {
-                        log_error
+                        k_log_error
                             ("workdir: %s is already exist as regular file (expected: directory)",
                              WORKDIR);
                         return -1;
                 }
 
         }
-        log_info("workdir is ready");
+        k_log_info("workdir is ready");
 
-        log_trace("preparing for workdir state...");
+        k_log_trace("preparing for workdir state...");
         wstate = malloc(sizeof(*wstate));
         if (!wstate) {
-                log_fatal("malloc for workdir state failed.");
+                k_log_fatal("malloc for workdir state failed.");
                 return -1;
         }
-        log_info("workdir state ready");
+        k_log_info("workdir state ready");
 
-        log_trace("preparing software...");
+        k_log_trace("preparing software...");
         register_app("Adams Terminal", win_spawn_iterm);
         register_app("Palette", win_spawn_palette);
         register_app("Guide", win_spawn_help);
 
-        log_trace("rendering window...");
+        k_log_trace("rendering window...");
         wm_init();              /* Init TUI */
 
         return 0;

@@ -289,7 +289,7 @@ static void win_render_frame(cosh_win_t *win, int is_focused)
 
         if (!(win->flags & WIN_FLAG_LOCKED)) {
                 wattron(win->ptr, COLOR_PAIR(CP_TOS_ACC));
-                mvwprintw(win->ptr, 0, win->w - 4, "X");
+                mvwprintw(win->ptr, 0, win->w - 6, "[ X ]");
                 wattroff(win->ptr, COLOR_PAIR(CP_TOS_ACC));
         }
 
