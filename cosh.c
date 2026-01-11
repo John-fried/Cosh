@@ -10,7 +10,7 @@ struct workdir_state *wstate = NULL;
 
 void register_app(const char *name, void (*spawn)(void))
 {
-	k_log_trace("  registered app: %s", name);
+        k_log_trace("  registered app: %s", name);
         app_entry_t *new_app = malloc(sizeof(app_entry_t));
         new_app->name = strdup(name);
         new_app->spawn = spawn;
@@ -139,7 +139,7 @@ static void dispatch_input(int ch)
 int boot(void)
 {
         struct stat sb;
-	setlocale(LC_ALL, "");
+        setlocale(LC_ALL, "");
 
         k_log_trace("ensure workdir...");
 

@@ -2,7 +2,7 @@
 
 CC      := gcc
 CFLAGS  := -Wall -Wextra -pedantic -O3 -march=native -std=gnu99 -DLOG_USE_COLOR
-LDFLAGS := -lpanelw -lncursesw -lvterm
+LDFLAGS := -lpanelw -lncursesw -lutil -lvterm
 
 # Installation Paths
 PREFIX  ?= /usr/local
