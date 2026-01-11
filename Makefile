@@ -10,9 +10,9 @@ BINDIR  := $(PREFIX)/bin
 DESTDIR ?=
 
 # Directories
-APP_DIR := apps
-UTIL_DIR := utils
-KERNEL_DIR := kernel
+APP_DIR := Apps
+UTIL_DIR := Utils
+KERNEL_DIR := Kernel
 OBJ_DIR := .obj
 
 # Files

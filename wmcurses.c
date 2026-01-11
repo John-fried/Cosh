@@ -319,7 +319,7 @@ static void win_render_frame(cosh_win_t *win, int is_focused)
 
 		wattron(win->ptr,
 			COLOR_PAIR(is_focused ? CP_TOS_HDR : CP_TOS_HDR_UNF));
-		mvwaddstr(win->ptr, bar_y, bar_x, "■");
+		mvwaddstr(win->ptr, bar_y, bar_x, "●");
 		wattroff(win->ptr,
 			 COLOR_PAIR(is_focused ? CP_TOS_HDR : CP_TOS_HDR_UNF));
 	}

@@ -2,7 +2,7 @@
 #define COSH_H
 
 #include "wmcurses.h"
-#include "kernel/kernel.h"
+#include "Kernel/kernel.h"
 #include "util.h"
 
 #include <poll.h>

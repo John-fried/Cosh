@@ -93,7 +93,7 @@ static int cb_sb_pushline(int cols, const VTermScreenCell *cells, void *user)
 	cosh_win_t *win = (cosh_win_t *) user;
 	iterm_t *self = (iterm_t *) win->priv;
 
-	if (!self || !self->history)
+	if (!self || !self->history || self->is_altscreen)
 		return 1;
 
 	int idx = (self->hist_head + 1) % HIST_SIZE;
@@ -152,7 +152,15 @@ static int cb_settermprop(VTermProp prop, VTermValue *val, void *user)
 
 	if (prop == VTERM_PROP_ALTSCREEN) {
 		self->is_altscreen = val->boolean;
-		win->scroll_cur = self->is_altscreen ? 0 : self->hist_cnt;
+		
+		if (self->is_altscreen) {
+			win->scroll_cur = 0;
+			vterm_screen_reset(self->vts, 1); 
+		} else {
+			win->scroll_cur = self->hist_cnt;
+		}
+		
+		werase(win->ptr);
 		win->dirty = 1;
 	}
 	return 1;
@@ -315,7 +323,11 @@ void app_iterm_render(cosh_win_t *win)
 	if (!self || !win->ptr)
 		return;
 
-	win->scroll_max = self->hist_cnt;
+	if (!self->is_altscreen) {
+		win->scroll_max = self->hist_cnt;
+	} else {
+		win->scroll_max = 0;
+	}
 
 	int rows = win->vh;
 	int cols = win->vw;
