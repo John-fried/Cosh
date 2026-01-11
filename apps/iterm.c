@@ -42,7 +42,7 @@ typedef struct {
         pid_t pid;
         int active;
 
-        /* Circular history buffer */
+	/* Circular history buffer */
         iterm_line_t *history;
         int hist_head;
         int hist_cnt;
@@ -121,6 +121,16 @@ static int cb_sb_pushline(int cols, const VTermScreenCell *cells, void *user)
         return 1;
 }
 
+static int cb_movecursor(VTermPos pos, VTermPos oldpos, int visible, void *user)
+{
+    (void)pos; (void)oldpos; (void)visible;
+    if (user) {
+        cosh_win_t *win = (cosh_win_t *)user;
+        win->dirty = 1;
+    }
+    return 1;
+}
+
 static int cb_damage(VTermRect rect, void *user)
 {
         (void)rect;
@@ -132,6 +142,7 @@ static int cb_damage(VTermRect rect, void *user)
 static VTermScreenCallbacks screen_cbs = {
         .damage = cb_damage,
         .sb_pushline = cb_sb_pushline,
+	.movecursor = cb_movecursor
 };
 
 /* --- Lifecycle --- */
@@ -272,6 +283,9 @@ void app_iterm_render(cosh_win_t *win)
         int rows = win->vh;
         int cols = win->vw;
 
+	VTermPos cur;
+	vterm_state_get_cursorpos(vterm_obtain_state(self->vt), &cur);
+
         for (int r = 0; r < rows; r++) {
                 if (r < self->scroll_off) {
                         /* History rendering from circular buffer */
@@ -292,28 +306,22 @@ void app_iterm_render(cosh_win_t *win)
                 }
 
                 /* Active terminal screen rendering */
-                VTermPos pos = {.row = r - self->scroll_off,.col = 0 };
-                for (pos.col = 0; pos.col < cols; pos.col++) {
-                        VTermScreenCell cell;
-                        if (vterm_screen_get_cell(self->vts, pos, &cell)) {
-                                int p =
-                                    get_pair(self, get_color_idx(cell.fg),
-                                             get_color_idx(cell.bg));
-                                draw_cell(win->ptr, r + 1, pos.col + 2,
-                                          cell.chars, p);
-                        }
-                }
-        }
+		VTermPos pos = {.row = r - self->scroll_off, .col = 0};
+		for (pos.col = 0; pos.col < cols; pos.col++) {
+		    VTermScreenCell cell;
+		    if (vterm_screen_get_cell(self->vts, pos, &cell)) {
+			int p;
+			
+			if (self->scroll_off == 0 && pos.row == cur.row && pos.col == cur.col) {
+			    p = CP_CURSOR; // Override dengan warna kursor
+			} else {
+			    p = get_pair(self, get_color_idx(cell.fg), get_color_idx(cell.bg));
+			}
 
-        /* Display cursor only when not scrolling back */
-        if (self->scroll_off == 0) {
-                VTermPos cur;
-                vterm_state_get_cursorpos(vterm_obtain_state(self->vt), &cur);
-                if (cur.row >= 0 && cur.row < rows && cur.col >= 0
-                    && cur.col < cols)
-                        mvwchgat(win->ptr, cur.row + 1, cur.col + 2, 1,
-                                 A_REVERSE, 0, NULL);
-        }
+			draw_cell(win->ptr, r + 1, pos.col + 2, cell.chars, p);
+		    }
+		}
+	}
 }
 
 void iterm_cleanup(void *p)
@@ -374,4 +382,5 @@ void win_spawn_iterm(void)
         win_setopt(win, WIN_OPT_TICK, app_iterm_tick);
         win_setopt(win, WIN_OPT_DESTROY, iterm_cleanup);
         win_setopt(win, WIN_OPT_RESIZE, iterm_sync_size);
+	win_setopt(win, WIN_OPT_CURSOR, 0);
 }

@@ -69,6 +69,7 @@ void wm_init(void)
                   BUTTON4_PRESSED | BUTTON5_PRESSED |
                   BUTTON6_PRESSED | BUTTON7_PRESSED, NULL);
 
+	init_pair(CP_CURSOR, COLOR_BLACK, COLOR_WHITE);
         init_pair(CP_TOS_STD, COLOR_BLUE, COLOR_WHITE);
         init_pair(CP_TOS_HDR, COLOR_WHITE, COLOR_BLUE);
         init_pair(CP_TOS_ACC, COLOR_RED, COLOR_WHITE);
@@ -266,6 +267,9 @@ void win_setopt(cosh_win_t *win, win_opt_t opt, ...)
         case WIN_OPT_RESIZE:
                 win->resize_cb = va_arg(ap, resize_fn);
                 break;
+	case WIN_OPT_CURSOR:
+		win->show_cursor = va_arg(ap, int);
+		break;
         }
         va_end(ap);
         win->dirty = 1;
@@ -523,6 +527,7 @@ void win_refresh_all(void)
         werase(stdscr);
         draw_statusbar();
         wnoutrefresh(stdscr);
+	curs_set(0);
 
         for (int i = 0; i < wm.count; i++) {
                 cosh_win_t *w = wm.stack[i];
@@ -539,6 +544,16 @@ void win_refresh_all(void)
         }
 
         update_panels();
+
+	if (wm.focus_idx >= 0) {
+		cosh_win_t *f = wm.stack[wm.focus_idx];
+	        if (f->show_cursor) {
+			curs_set(100);
+			/* Let ncurses move the physical cursor to the virtual window cursor position. */
+			wnoutrefresh(f->ptr);
+		}
+	}
+
         doupdate();
         win_needs_redraw = 0;
 }

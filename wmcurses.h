@@ -31,7 +31,8 @@ typedef enum {
         WIN_OPT_PRIV = 6,
         WIN_OPT_DESTROY = 7,
         WIN_OPT_TICK = 8,
-        WIN_OPT_RESIZE = 9
+        WIN_OPT_RESIZE = 9,
+        WIN_OPT_CURSOR = 10
 } win_opt_t;
 
 typedef enum {
@@ -44,6 +45,7 @@ typedef enum {
 
 #define COLOR_GREY 8
 
+#define CP_CURSOR 9
 #define CP_TOS_STD	1       /* Blue on White */
 #define CP_TOS_HDR	2       /* Green oh White (Focused) */
 #define CP_TOS_ACC	3       /* Red on White (Widgets) */
@@ -72,6 +74,7 @@ typedef struct cosh_win {
         int color_pair;
         int flags;
         int fg, bg;             /* Cached colors */
+	int show_cursor;
         void *priv;
         destroy_fn destroy_cb;
         render_fn render_cb;
