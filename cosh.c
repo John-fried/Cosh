@@ -6,11 +6,10 @@ void win_spawn_help(void);
 
 app_entry_t *app_registry = NULL;
 int app_count = 0;
-struct workdir_state *wstate = NULL;
 
 void register_app(const char *name, void (*spawn)(void))
 {
-        k_log_trace("  registered app: %s", name);
+        k_log_trace("	Registered app: %s", name);
         app_entry_t *new_app = malloc(sizeof(app_entry_t));
         new_app->name = strdup(name);
         new_app->spawn = spawn;
@@ -138,91 +137,15 @@ static void dispatch_input(int ch)
 
 int boot(void)
 {
-        struct stat sb;
-        setlocale(LC_ALL, "");
+	if (k_boot() != 0)
+		return -1;
 
-        k_log_trace("ensure workdir...");
-
-        if (lstat(WORKDIR, &sb) == -1) {
-                k_log_info("workdir uninitialized: %s", strerror(errno));
-                mkdir(WORKDIR, 0755);
-        } else {
-                if (S_ISREG(sb.st_mode)) {
-                        k_log_error
-                            ("workdir: %s is already exist as regular file (expected: directory)",
-                             WORKDIR);
-                        return -1;
-                }
-
-        }
-        k_log_info("workdir is ready");
-
-        k_log_trace("preparing for workdir state...");
-        wstate = malloc(sizeof(*wstate));
-        if (!wstate) {
-                k_log_fatal("malloc for workdir state failed.");
-                return -1;
-        }
-        k_log_info("workdir state ready");
-
-        k_log_trace("preparing software...");
+        k_log_trace("Preparing software...");
         register_app("Adams Terminal", win_spawn_iterm);
         register_app("Palette", win_spawn_palette);
         register_app("Guide", win_spawn_help);
 
-        k_log_trace("rendering window...");
-        wm_init();              /* Init TUI */
-
-        return 0;
-}
-
-void shutdown(void)
-{
-        int dummy;
-
-        free(wstate);
-        cleanup_empty_files(WORKDIR, &dummy);
-        endwin();
-}
-
-int get_workdir_usage(void)
-{
-        struct stat st;
-        if (lstat(WORKDIR, &st) == -1)
-                return -1;
-
-        if (wstate->cached == 1 && st.st_mtime == wstate->last_mtime)
-                return (int)(wstate->cached_size / 1024);
-
-        if (!S_ISDIR(st.st_mode))
-                return st.st_size;
-
-        DIR *d = opendir(WORKDIR);
-        if (!d)
-                return -1;
-
-        long total_size = 0;
-        struct dirent *de;
-        char path[1024];
-
-        while ((de = readdir(d)) != NULL) {
-                if (strcmp(de->d_name, ".") == 0
-                    || strcmp(de->d_name, "..") == 0)
-                        continue;
-
-                snprintf(path, sizeof(path), "%s/%s", WORKDIR, de->d_name);
-
-                struct stat fst;
-                if (lstat(path, &fst) != -1) {
-                        total_size += (fst.st_blocks * 512);
-                }
-        }
-
-        closedir(d);
-        wstate->last_mtime = st.st_mtime;
-        wstate->cached_size = total_size;
-        wstate->cached = true;
-        return (int)(total_size / 1024);
+	return 0;
 }
 
 int main(void)
@@ -230,7 +153,10 @@ int main(void)
         struct pollfd pfd = {.fd = 0,.events = POLLIN };
         int ch;
 
-        boot();
+        if (boot() != 0) {
+		k_log_fatal("some of booting process was failed. Aborting.");
+		return 1;
+	}
         win_spawn_iterm();
         if (wm.focus_idx >= 0)
                 win_toggle_fullscreen(wm.stack[wm.focus_idx]);
@@ -258,6 +184,6 @@ int main(void)
                 }
         }
 
-        shutdown();
+        k_shutdown();
         return 0;
 }

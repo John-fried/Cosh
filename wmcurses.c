@@ -504,7 +504,7 @@ static void draw_statusbar(void)
 
         attron(COLOR_PAIR(CP_TOS_BAR));
         mvprintw(LINES - 1, 0, " %s | Used: %d | Open: %d | [%s]",
-                 time_str, get_workdir_usage(), wm.count,
+                 time_str, k_get_workdir_usage(), wm.count,
                  wm.focus_idx >= 0 ? wm.stack[wm.focus_idx]->title : "Desktop");
         clrtoeol();
         attroff(COLOR_PAIR(CP_TOS_BAR));
