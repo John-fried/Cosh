@@ -38,6 +38,7 @@ typedef struct {
 	int fd;
 	pid_t pid;
 	int active;
+	int is_altscreen;
 
 	iterm_line_t *history;
 	int hist_head;
@@ -144,10 +145,24 @@ static int cb_damage(VTermRect rect, void *user)
 	return 1;
 }
 
+static int cb_settermprop(VTermProp prop, VTermValue *val, void *user)
+{
+	cosh_win_t *win = (cosh_win_t *) user;
+	iterm_t *self = (iterm_t *) win->priv;
+
+	if (prop == VTERM_PROP_ALTSCREEN) {
+		self->is_altscreen = val->boolean;
+		win->scroll_cur = self->is_altscreen ? 0 : self->hist_cnt;
+		win->dirty = 1;
+	}
+	return 1;
+}
+
 static VTermScreenCallbacks screen_cbs = {
 	.damage = cb_damage,
 	.sb_pushline = cb_sb_pushline,
-	.movecursor = cb_movecursor
+	.movecursor = cb_movecursor,
+	.settermprop = cb_settermprop
 };
 
 /* --- Lifecycle --- */
@@ -208,20 +223,26 @@ void app_iterm_input(cosh_win_t *win, int ch)
 	if (!self || !self->active)
 		return;
 
-	if (ch == WIN_MOUSE_SCROLL_UP) {
-		if (win->scroll_cur > 0)
-			win->scroll_cur =
-			    (win->scroll_cur > 2) ? win->scroll_cur - 2 : 0;
-		win->dirty = 1;
-		return;
-	} else if (ch == WIN_MOUSE_SCROLL_DOWN) {
-		if (win->scroll_cur < win->scroll_max)
-			win->scroll_cur =
-			    (win->scroll_cur + 2 >
-			     win->scroll_max) ? win->
-			    scroll_max : win->scroll_cur + 2;
-		win->dirty = 1;
-		return;
+	if (self->is_altscreen) {
+		if (ch == WIN_MOUSE_SCROLL_UP) {
+			vterm_keyboard_key(self->vt, VTERM_KEY_UP, VTERM_MOD_NONE);
+			goto send_output;
+		} else if (ch == WIN_MOUSE_SCROLL_DOWN) {
+			vterm_keyboard_key(self->vt, VTERM_KEY_DOWN, VTERM_MOD_NONE);
+			goto send_output;
+		}
+	} else {
+		if (ch == WIN_MOUSE_SCROLL_UP) {
+			if (win->scroll_cur > 0)
+				win->scroll_cur = (win->scroll_cur > 2) ? win->scroll_cur - 2 : 0;
+			win->dirty = 1;
+			return;
+		} else if (ch == WIN_MOUSE_SCROLL_DOWN) {
+			if (win->scroll_cur < win->scroll_max)
+				win->scroll_cur = (win->scroll_cur + 2 > win->scroll_max) ? win->scroll_max : win->scroll_cur + 2;
+			win->dirty = 1;
+			return;
+		}
 	}
 
 	win->scroll_cur = win->scroll_max;
@@ -259,6 +280,13 @@ void app_iterm_input(cosh_win_t *win, int ch)
 	size_t len = vterm_output_read(self->vt, out, sizeof(out));
 	if (len > 0)
 		(void)write(self->fd, out, len);
+
+send_output: {
+		char out[128];
+		size_t len = vterm_output_read(self->vt, out, sizeof(out));
+		if (len > 0)
+			(void)write(self->fd, out, len);
+	}
 }
 
 static void draw_cell(WINDOW *w, int y, int x, uint32_t *chars, int pair)
@@ -291,7 +319,7 @@ void app_iterm_render(cosh_win_t *win)
 
 	int rows = win->vh;
 	int cols = win->vw;
-	int scroll_offset = self->hist_cnt - win->scroll_cur;
+	int scroll_offset = self->is_altscreen ? 0 : (self->hist_cnt - win->scroll_cur);
 
 	if (scroll_offset < 0)
 		scroll_offset = 0;
@@ -300,7 +328,7 @@ void app_iterm_render(cosh_win_t *win)
 	vterm_state_get_cursorpos(vterm_obtain_state(self->vt), &cur);
 
 	for (int r = 0; r < rows; r++) {
-		if (r < scroll_offset) {
+		if (!self->is_altscreen && r < scroll_offset) {
 			/* Render from History */
 			int hidx =
 			    (self->hist_head - (scroll_offset - r) + 1 +
@@ -321,7 +349,7 @@ void app_iterm_render(cosh_win_t *win)
 		}
 
 		/* Render Active Screen */
-		VTermPos pos = {.row = r - scroll_offset,.col = 0 };
+		VTermPos pos = {.row = self->is_altscreen ? r : (r - scroll_offset), .col = 0 };
 		for (pos.col = 0; pos.col < cols; pos.col++) {
 			VTermScreenCell cell;
 			if (vterm_screen_get_cell(self->vts, pos, &cell)) {
