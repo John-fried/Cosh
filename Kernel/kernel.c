@@ -1,4 +1,4 @@
-#include "Kernel.h"
+#include "kernel.h"
 struct workdir_state *wstate = NULL;
 
 int k_boot(void)

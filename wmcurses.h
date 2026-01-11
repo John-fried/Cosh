@@ -53,6 +53,7 @@ typedef enum {
 #define CP_TOS_HDR_UNF	5       /* White on blue (unfocus) */
 
 #define CP_WIN_START	10
+#define CP_WIN_BG 11
 
 struct cosh_win;
 

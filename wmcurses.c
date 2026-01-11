@@ -75,6 +75,7 @@ void wm_init(void)
 	init_pair(CP_TOS_ACC, COLOR_RED, COLOR_WHITE);
 	init_pair(CP_TOS_BAR, COLOR_WHITE, COLOR_BLUE);
 	init_pair(CP_TOS_HDR_UNF, COLOR_WHITE, COLOR_GREY);
+	init_pair(CP_WIN_BG, COLOR_CYAN, COLOR_CYAN);
 
 	wbkgd(stdscr, COLOR_PAIR(CP_TOS_STD));
 }
@@ -566,18 +567,40 @@ void win_handle_mouse(void)
  */
 static void draw_statusbar(void)
 {
-	char time_str[16];
-	time_t now = time(NULL);
-	struct tm *t = localtime(&now);
+    char time_str[16];
+    char status_left[128];
+    char status_right[64];
+    time_t now = time(NULL);
+    struct tm *t = localtime(&now);
 
-	strftime(time_str, sizeof(time_str), "%H:%M:%S", t);
+    strftime(time_str, sizeof(time_str), "%H:%M:%S", t);
 
-	attron(COLOR_PAIR(CP_TOS_BAR));
-	mvprintw(LINES - 1, 0, " %s | Used: %d | Open: %d | [%s]",
-		 time_str, k_get_workdir_usage(), wm.count,
-		 wm.focus_idx >= 0 ? wm.stack[wm.focus_idx]->title : "Desktop");
-	clrtoeol();
-	attroff(COLOR_PAIR(CP_TOS_BAR));
+    snprintf(status_left, sizeof(status_left), " %s | Used: %d | Open: %d", 
+             time_str, k_get_workdir_usage(), wm.count);
+
+    snprintf(status_right, sizeof(status_right), "[%s] ", 
+             wm.focus_idx >= 0 ? wm.stack[wm.focus_idx]->title : "Desktop");
+
+    attron(COLOR_PAIR(CP_TOS_BAR));
+    mvhline(LINES - 1, 0, ' ', COLS);
+    mvaddstr(LINES - 1, 0, status_left);
+
+    int x_right = COLS - strlen(status_right);
+    mvaddstr(LINES - 1, x_right, status_right);
+
+    attroff(COLOR_PAIR(CP_TOS_BAR));
+}
+
+static void draw_desktop(void)
+{
+	attron(COLOR_PAIR(CP_WIN_BG));
+
+	for (int y = 0; y < LINES - 1; y++)
+		for (int x = 0; x < COLS; x++) {
+			mvaddch(y, x, '.');
+		}
+
+	attroff(COLOR_PAIR(CP_WIN_BG));
 }
 
 /**
@@ -591,6 +614,7 @@ void win_refresh_all(void)
 	}
 
 	werase(stdscr);
+	draw_desktop();
 	draw_statusbar();
 	wnoutrefresh(stdscr);
 	curs_set(0);
