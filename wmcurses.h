@@ -23,24 +23,24 @@
 
 /* Options for win_setopt */
 typedef enum {
-        WIN_OPT_TITLE = 1,
-        WIN_OPT_RENDER = 2,
-        WIN_OPT_INPUT = 3,
-        WIN_OPT_FG = 4,
-        WIN_OPT_BG = 5,
-        WIN_OPT_PRIV = 6,
-        WIN_OPT_DESTROY = 7,
-        WIN_OPT_TICK = 8,
-        WIN_OPT_RESIZE = 9,
-        WIN_OPT_CURSOR = 10
+	WIN_OPT_TITLE = 1,
+	WIN_OPT_RENDER = 2,
+	WIN_OPT_INPUT = 3,
+	WIN_OPT_FG = 4,
+	WIN_OPT_BG = 5,
+	WIN_OPT_PRIV = 6,
+	WIN_OPT_DESTROY = 7,
+	WIN_OPT_TICK = 8,
+	WIN_OPT_RESIZE = 9,
+	WIN_OPT_CURSOR = 10
 } win_opt_t;
 
 typedef enum {
-        WIN_SEQ_NONE = 0,
-        WIN_MOUSE_SCROLL_UP = 0x2001,
-        WIN_MOUSE_SCROLL_DOWN = 0x2002,
-        WIN_MOUSE_SCROLL_LEFT = 0x2003,
-        WIN_MOUSE_SCROLL_RIGHT = 0x2004
+	WIN_SEQ_NONE = 0,
+	WIN_MOUSE_SCROLL_UP = 0x2001,
+	WIN_MOUSE_SCROLL_DOWN = 0x2002,
+	WIN_MOUSE_SCROLL_LEFT = 0x2003,
+	WIN_MOUSE_SCROLL_RIGHT = 0x2004
 } win_seq_t;
 
 #define COLOR_GREY 8
@@ -63,31 +63,34 @@ typedef void (*resize_fn)(struct cosh_win * win, int new_h, int new_w);
 typedef void (*tick_fn)(struct cosh_win * win);
 
 typedef struct cosh_win {
-        WINDOW *ptr;
-        PANEL *panel;           /* ncurses panel integration */
-        char title[32];
-        int x, y, w, h;
-        int vw, vh;
-        int rx, ry, rw, rh;     /* Restoration coordinates */
-        int active;
-        int dirty;
-        int color_pair;
-        int flags;
-        int fg, bg;             /* Cached colors */
-	int show_cursor;
-        void *priv;
-        destroy_fn destroy_cb;
-        render_fn render_cb;
-        input_fn input_cb;
-        resize_fn resize_cb;
-        win_seq_t last_seq;
-        tick_fn tick_cb;
+	WINDOW		*ptr;
+	PANEL		*panel;           /* ncurses panel integration */
+	char		title[32];
+	int		x, y, w, h;
+	int		vw, vh;
+	int		rx, ry, rw, rh;     /* Restoration coordinates */
+	int		active;
+	int		dirty;
+	int		color_pair;
+	int		flags;
+	int		fg, bg;             /* Cached colors */
+	int		show_cursor;
+	int		scroll_max;
+	int		scroll_cur;
+	int		cursor_y, cursor_x;
+	void		*priv;
+	destroy_fn	destroy_cb;
+	render_fn	render_cb;
+	input_fn	input_cb;
+	resize_fn	resize_cb;
+	win_seq_t	last_seq;
+	tick_fn		tick_cb;
 } cosh_win_t;
 
 typedef struct {
-        cosh_win_t *stack[WIN_MAX];
-        int count;
-        int focus_idx;
+	cosh_win_t	*stack[WIN_MAX];
+	int		count;
+	int		focus_idx;
 } cosh_wm_t;
 
 extern cosh_wm_t wm;
@@ -110,5 +113,11 @@ void win_ding(void);
 void win_move_focused(int dy, int dx);
 void win_handle_mouse(void);
 void win_refresh_all(void);
+
+void win_printf(cosh_win_t * win, const char *fmt, ...);
+void win_attron(cosh_win_t * win, int pair);
+void win_attroff(cosh_win_t * win, int pair);
+void win_move_cursor(cosh_win_t * win, int y, int x);
+void win_clear(cosh_win_t * win);
 
 #endif                          /* WMCURSES_H */

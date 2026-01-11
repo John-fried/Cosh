@@ -9,10 +9,10 @@
 #include "configuration.h"
 
 typedef struct app_entry {
-        char *name;
-        void (*spawn)(void);
-        int score;              /* for levenshtein */
-        struct app_entry *next; /* for linked list */
+	char *name;
+	void (*spawn)(void);
+	int score;              /* for levenshtein */
+	struct app_entry *next; /* for linked list */
 } app_entry_t;
 
 extern app_entry_t *app_registry;
