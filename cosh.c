@@ -171,19 +171,24 @@ int main(void)
                         win_refresh_all();
 
                 if (poll(&pfd, 1, TICK_DELAY) > 0) {
-                        ch = getch();
-                        if (ch == CTRL('/')) {
-                                if (confirm_shutdown())
-                                        break;
-                                win_needs_redraw = 1;
-                                continue;
-                        }
-                        dispatch_input(ch);
+                        while ((ch = getch()) != ERR) {
+				if (ch == CTRL('/')) {
+					if (confirm_shutdown())
+						goto shutdown;
+					win_needs_redraw = 1;
+					continue;
+				}
+				dispatch_input(ch);
+			}
                 } else {
+			/* Usefull to see update */
                         win_needs_redraw = 1;
                 }
         }
+	
+	return 0;
 
+shutdown:
         k_shutdown();
         return 0;
 }

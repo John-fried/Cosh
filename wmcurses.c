@@ -62,11 +62,12 @@ void wm_init(void)
         initscr();
         raw();
         noecho();
+	nodelay(stdscr, TRUE);
         keypad(stdscr, TRUE);
         curs_set(0);
         start_color();
         use_default_colors();
-        set_escdelay(25);
+        set_escdelay(10);
 
         signal(SIGWINCH, handle_sigwinch);
 
@@ -75,7 +76,7 @@ void wm_init(void)
 
         mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
 
-        printf("\033[?1003h\n");        /* force */
+        printf("\033[?1002h\n");        /* force, this is super good than 1003h */
         fflush(stdout);
 
         init_pair(CP_CURSOR, COLOR_BLACK, COLOR_WHITE);
@@ -85,10 +86,16 @@ void wm_init(void)
         init_pair(CP_TOS_BAR, COLOR_WHITE, COLOR_BLUE);
         init_pair(CP_TOS_HDR_UNF, COLOR_WHITE, COLOR_GREY);
         init_pair(CP_WIN_BG, COLOR_CYAN, COLOR_CYAN);
+	init_pair(CP_TOS_DRAG, COLOR_BLACK, COLOR_GREEN);
 
         wbkgd(stdscr, COLOR_PAIR(CP_TOS_STD));
 }
 
+void wm_cleanup_before_exit(void)
+{
+	printf("\033[?1002l");
+	fflush(stdout);
+}
 /**
  * win_create - Create window and initialize its panel
  */
@@ -302,6 +309,10 @@ void win_setopt(cosh_win_t *win, win_opt_t opt, ...)
 static void win_render_frame(cosh_win_t *win, int is_focused)
 {
         int hdr_color = is_focused ? CP_TOS_HDR : CP_TOS_HDR_UNF;
+
+	if (win->is_dragging)
+		hdr_color = CP_TOS_DRAG;
+
         cchar_t ls, rs, ts, bs, tl, tr, bl, br;
 
 	if (is_focused) {
@@ -540,6 +551,26 @@ void win_handle_mouse(void)
         if (getmouse(&ev) != OK)
                 return;
 
+	/* Handle dragging in window */
+	if (wm.drag_win) {
+		if (ev.bstate & BUTTON1_RELEASED) {
+			wm.drag_win->is_dragging = 0;
+			wm.drag_win = NULL;
+		} else {
+			wm.drag_win->y = ev.y - wm.drag_win->drag_off_y;
+			wm.drag_win->x = ev.x - wm.drag_win->drag_off_x;
+
+			if (wm.drag_win->y < 0) wm.drag_win->y = 0;
+			if (wm.drag_win->x < 0) wm.drag_win->x = 0;
+
+			move_panel(wm.drag_win->panel, wm.drag_win->y, wm.drag_win->x);
+			win_needs_redraw = 1;
+		}
+
+		return; /* dont handle clicks */
+	}
+	
+	/* Handle mouse */
         for (int i = wm.count - 1; i >= 0; i--) {
                 cosh_win_t *w = wm.stack[i];
 
@@ -549,7 +580,7 @@ void win_handle_mouse(void)
                         win_raise(i);
                         w->last_seq = WIN_SEQ_NONE;
 
-                        /* Handle Clicks */
+                       /* Handle Clicks */
                         if (ev.bstate & (BUTTON1_PRESSED | BUTTON1_CLICKED)) {
                                 if (!(w->flags & WIN_FLAG_LOCKED)
                                     && ev.y == w->y && ev.x >= (w->x + w->w - 6)
@@ -561,6 +592,20 @@ void win_handle_mouse(void)
                                         w->input_cb(w, KEY_MOUSE);
                         }
 
+			/* Handle pressed (not click) */
+			if (ev.bstate & BUTTON1_PRESSED) {
+				/* w->y: where the y pos, is likely up/down */
+				if (ev.y >= w->y && ev.y <= w->y + 1) {
+					w->is_dragging = 1;
+					w->drag_off_y = ev.y - w->y;
+					w->drag_off_x = ev.x - w->x;
+					wm.drag_win = w;
+					win_needs_redraw = 1;
+					return;
+				}
+			}
+
+ 
                         /* Handle Vertical Scroll */
                         if (ev.bstate & BUTTON4_PRESSED) {
                                 w->last_seq = WIN_MOUSE_SCROLL_UP;
@@ -623,14 +668,11 @@ static void draw_statusbar(void)
 
 static void draw_desktop(void)
 {
-        attron(COLOR_PAIR(CP_WIN_BG));
-
-        for (int y = 0; y < LINES - 1; y++)
-                for (int x = 0; x < COLS; x++) {
-                        mvhline(y, 0, '.', COLS);
-                }
-
-        attroff(COLOR_PAIR(CP_WIN_BG));
+	attron(COLOR_PAIR(CP_WIN_BG));
+	for (int y = 0; y < LINES - 1; y++) {
+        mvhline(y, 0, '.', COLS); 
+    }
+    attroff(COLOR_PAIR(CP_WIN_BG));
 }
 
 /**
@@ -643,7 +685,6 @@ void win_refresh_all(void)
                 win_force_full = 0;
         }
 
-        werase(stdscr);
         draw_desktop();
         draw_statusbar();
         wnoutrefresh(stdscr);

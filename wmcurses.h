@@ -1,6 +1,9 @@
 #ifndef WMCURSES_H
 #define WMCURSES_H
 
+#include "configuration.h"
+#include "util.h"
+
 #define _XOPEN_SOURCE_EXTENDED
 #include <curses.h>
 #include <ncurses.h>
@@ -12,9 +15,6 @@
 #include <sys/ioctl.h>
 #include <time.h>
 #include <unistd.h>
-
-#define WIN_MAX		32
-#define CTRL(c)		(((c) ^ ((((c) ^ 0x40) >> 2) & 0x10)) & 0x1f)
 
 /* Window Flags for win_create */
 #define WIN_FLAG_NONE		0x00
@@ -59,6 +59,7 @@ typedef enum {
 #define CP_TOS_HDR_UNF	5
 #define CP_CURSOR	6
 #define CP_WIN_BG	7
+#define CP_TOS_DRAG	8
 
 #define CP_WIN_START	20      /* Where the start index for every window color pair */
 
@@ -82,10 +83,18 @@ typedef struct cosh_win {
         int color_pair;
         int flags;
         int fg, bg;             /* Cached colors */
-        int show_cursor;
+
         int scroll_max;
         int scroll_cur;
+
+	int is_dragging;
+	int drag_off_y, drag_off_x;
+	struct timespec drag_start_time;
+
+        int show_cursor;
         int cursor_y, cursor_x;
+
+	/* Private state & callbacks */
         void *priv;
         destroy_fn destroy_cb;
         render_fn render_cb;
@@ -97,6 +106,7 @@ typedef struct cosh_win {
 
 typedef struct {
         cosh_win_t *stack[WIN_MAX];
+	cosh_win_t *drag_win; /* Pointer to a window that dragged */
         int count;
         int focus_idx;
 } cosh_wm_t;
@@ -112,6 +122,7 @@ void wm_init(void);
 cosh_win_t *win_create(int h, int w, int flags);
 void win_setopt(cosh_win_t * win, win_opt_t opt, ...);
 
+void wm_cleanup_before_exit(void);
 void win_destroy_focused(void);
 void win_raise(int idx);
 void win_vibrate(void);

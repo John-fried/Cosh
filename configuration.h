@@ -8,6 +8,8 @@
 #define TICK_DELAY (1000 / TARGET_FPS)
 #define WORKDIR		".cosh" /* all workdir state folder */
 
+
+#define WIN_MAX		32	/* How much window max */
 #define MODIFIER_KEY    27      /* ALT - ALT ... COMBINE */
 
 #endif                          /* CONFIGURATION_H */

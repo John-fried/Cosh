@@ -40,6 +40,7 @@ void k_shutdown(void)
 {
         int dummy;
 
+	wm_cleanup_before_exit();
         free(wstate);
         cleanup_empty_files(WORKDIR, &dummy);
         endwin();
