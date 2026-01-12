@@ -158,7 +158,6 @@ int main(void)
                 return 1;
         }
 
-        win_buffer_request = WIN_DONT_RESIZE;
         win_spawn_iterm();
         win_toggle_fullscreen(wm.stack[wm.focus_idx]);
 
