@@ -45,28 +45,22 @@ typedef struct {
         int hist_cnt;
 
         /* Pair cache: 0-255 mapping for ncurses */
-        int pairs[16][16];
+        int pairs[256][256];
 } iterm_t;
 
 /* --- Internal Helpers --- */
 
-/**
- * Access color index directly from memory to bypass inconsistent VTermColor 
- * member naming across different libvterm versions (Termux/Debian/Arch).
- * Verified for libvterm 0.3.3.
- */
 static inline int get_color_idx(VTermColor c)
 {
         if (c.type != VTERM_COLOR_INDEXED)
                 return -1;
-        /* Memory layout: [type:1byte][index:1byte] ... */
         return ((unsigned char *)&c)[1];
 }
 
 static int get_pair(iterm_t *self, int vfg, int vbg)
 {
-        int fg = (vfg >= 0 && vfg < 16) ? vfg : COLOR_WHITE;
-        int bg = (vbg >= 0 && vbg < 16) ? vbg : COLOR_BLACK;
+        int fg = (vfg >= 0 && vfg < 256) ? vfg : COLOR_WHITE;
+        int bg = (vbg >= 0 && vbg < 256) ? vbg : COLOR_BLACK;
 
         if (self->pairs[fg][bg] == 0) {
                 int p = CP_WIN_START + 100 + (fg * 16 + bg);
@@ -333,6 +327,7 @@ void app_iterm_render(cosh_win_t *win)
         if (!self->is_altscreen) {
                 win->scroll_max = self->hist_cnt;
         } else {
+		win_clear(win);
                 win->scroll_max = 0;
         }
 

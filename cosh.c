@@ -105,7 +105,6 @@ static void dispatch_input(int ch)
                         return;
 
                         /* for unfocus */
-                case ERR:
                 case CTRL('a'):
                         wm.focus_idx = -1;
                         for (int i = 0; i < wm.count; i++)
