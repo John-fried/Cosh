@@ -72,7 +72,7 @@ void wm_init(void)
         signal(SIGWINCH, handle_sigwinch);
 
         if (can_change_color())
-                init_color(COLOR_BLUE, 0, 0, 666);
+                init_color(COLOR_HDR_BLUE, 0, 0, 666);
 
         mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
 
@@ -81,7 +81,7 @@ void wm_init(void)
 
         init_pair(CP_CURSOR, COLOR_BLACK, COLOR_WHITE);
         init_pair(CP_TOS_STD, COLOR_BLUE, COLOR_WHITE);
-        init_pair(CP_TOS_HDR, COLOR_WHITE, COLOR_BLUE);
+	init_pair(CP_TOS_HDR, COLOR_WHITE, can_change_color() ? COLOR_HDR_BLUE : COLOR_BLUE);
         init_pair(CP_TOS_ACC, COLOR_RED, COLOR_WHITE);
         init_pair(CP_TOS_BAR, COLOR_WHITE, COLOR_BLUE);
         init_pair(CP_TOS_HDR_UNF, COLOR_WHITE, COLOR_GREY);
@@ -310,7 +310,7 @@ static void win_render_frame(cosh_win_t *win, int is_focused)
 {
         int hdr_color = is_focused ? CP_TOS_HDR : CP_TOS_HDR_UNF;
 
-	if (win->is_dragging)
+	if (win->drag_state.is_dragging)
 		hdr_color = CP_TOS_DRAG;
 
         cchar_t ls, rs, ts, bs, tl, tr, bl, br;
@@ -359,7 +359,7 @@ static void win_render_frame(cosh_win_t *win, int is_focused)
 
                 wattron(win->ptr,
                         COLOR_PAIR(is_focused ? CP_TOS_HDR : CP_TOS_HDR_UNF));
-                mvwaddstr(win->ptr, bar_y, bar_x, "●");
+                mvwaddstr(win->ptr, bar_y, bar_x, "┃");
                 wattroff(win->ptr,
                          COLOR_PAIR(is_focused ? CP_TOS_HDR : CP_TOS_HDR_UNF));
         }
@@ -553,12 +553,12 @@ void win_handle_mouse(void)
 
 	/* Handle dragging in window */
 	if (wm.drag_win) {
-		if (ev.bstate & BUTTON1_RELEASED) {
-			wm.drag_win->is_dragging = 0;
+		if (ev.bstate & (BUTTON1_RELEASED | BUTTON1_CLICKED)) {
+			wm.drag_win->drag_state.is_dragging = 0;
 			wm.drag_win = NULL;
 		} else {
-			wm.drag_win->y = ev.y - wm.drag_win->drag_off_y;
-			wm.drag_win->x = ev.x - wm.drag_win->drag_off_x;
+			wm.drag_win->y = ev.y - wm.drag_win->drag_state.drag_off_y;
+			wm.drag_win->x = ev.x - wm.drag_win->drag_state.drag_off_x;
 
 			if (wm.drag_win->y < 0) wm.drag_win->y = 0;
 			if (wm.drag_win->x < 0) wm.drag_win->x = 0;
@@ -596,9 +596,9 @@ void win_handle_mouse(void)
 			if (ev.bstate & BUTTON1_PRESSED) {
 				/* w->y: where the y pos, is likely up/down */
 				if (ev.y >= w->y && ev.y <= w->y + 1) {
-					w->is_dragging = 1;
-					w->drag_off_y = ev.y - w->y;
-					w->drag_off_x = ev.x - w->x;
+					w->drag_state.is_dragging = 1;
+					w->drag_state.drag_off_y = ev.y - w->y;
+					w->drag_state.drag_off_x = ev.x - w->x;
 					wm.drag_win = w;
 					win_needs_redraw = 1;
 					return;

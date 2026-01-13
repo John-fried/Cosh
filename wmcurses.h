@@ -52,6 +52,8 @@ typedef enum {
 #define COLOR_GREY 8
 #endif
 
+#define COLOR_HDR_BLUE 16
+
 #define CP_TOS_STD	1
 #define CP_TOS_HDR	2
 #define CP_TOS_ACC	3
@@ -71,6 +73,11 @@ typedef void (*input_fn)(struct cosh_win * win, int ch);
 typedef void (*resize_fn)(struct cosh_win * win, int new_h, int new_w);
 typedef void (*tick_fn)(struct cosh_win * win);
 
+typedef struct {
+	int is_dragging;
+	int drag_off_y, drag_off_x;
+} cosh_win_drag_state;
+
 typedef struct cosh_win {
         WINDOW *ptr;
         PANEL *panel;           /* ncurses panel integration */
@@ -87,9 +94,7 @@ typedef struct cosh_win {
         int scroll_max;
         int scroll_cur;
 
-	int is_dragging;
-	int drag_off_y, drag_off_x;
-	struct timespec drag_start_time;
+	cosh_win_drag_state drag_state;
 
         int show_cursor;
         int cursor_y, cursor_x;
