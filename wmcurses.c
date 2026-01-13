@@ -652,8 +652,8 @@ static void draw_statusbar(void)
 
         strftime(time_str, sizeof(time_str), "%H:%M:%S", t);
 
-        snprintf(status_left, sizeof(status_left), " %s | Used: %d | Open: %d",
-                 time_str, k_get_workdir_usage(), wm.count);
+        snprintf(status_left, sizeof(status_left), " %s | Used: %d %ld(kb) | Open: %d",
+                 time_str, k_get_workdir_usage(), k_self_get_rss() / 1024, wm.count);
 
         snprintf(status_right, sizeof(status_right), "[%s] ",
                  wm.focus_idx >= 0 ? wm.stack[wm.focus_idx]->title : "Desktop");

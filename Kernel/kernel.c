@@ -93,3 +93,20 @@ int k_get_workdir_usage(void)
         wstate->cached = true;
         return (int)(total_size / 1024);
 }
+
+long k_self_get_rss(void)
+{
+	static long pagesize = 0;
+	long rss = 0;
+	FILE *fp = fopen("/proc/self/statm", "r");
+
+	if (pagesize <= 0)
+		pagesize = sysconf(_SC_PAGESIZE);
+
+	if (fp) {
+		fscanf(fp, "%*s %ld", &rss);
+		fclose(fp);
+	}
+
+	return rss * pagesize; 
+}

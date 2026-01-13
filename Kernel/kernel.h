@@ -10,6 +10,8 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <string.h>
+#include <stdio.h>
+#include <unistd.h>
 #include <locale.h>
 #include <limits.h>
 #include <errno.h>
@@ -23,6 +25,7 @@ struct workdir_state {
 };
 
 int k_get_workdir_usage(void);
+long k_self_get_rss(void);
 int k_boot(void);
 void k_shutdown(void);
 
