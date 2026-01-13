@@ -577,13 +577,13 @@ void win_handle_mouse(void)
                 if (ev.y >= w->y && ev.y < (w->y + w->h) &&
                     ev.x >= w->x && ev.x < (w->x + w->w)) {
 
-                        if (!(wm.stack[wm.focus_idx]->flags & WIN_FLAG_FULLSCREEN))
-				win_raise(i);
-
                         w->last_seq = WIN_SEQ_NONE;
 
-                       /* Handle Clicks */
+                        /* Handle Clicks */
                         if (ev.bstate & (BUTTON1_PRESSED | BUTTON1_CLICKED)) {
+				if (wm.focus_idx != i)
+					win_raise(i);
+
                                 if (!(w->flags & WIN_FLAG_LOCKED)
                                     && ev.y == w->y && ev.x >= (w->x + w->w - 6)
                                     && ev.x < (w->x + w->w - 1)) {
@@ -633,7 +633,7 @@ void win_handle_mouse(void)
                 }
         }
 
-        if (ev.bstate & (BUTTON1_PRESSED | BUTTON1_CLICKED)) {
+        if ((ev.y != LINES - 1) && ev.bstate & (BUTTON1_PRESSED | BUTTON1_CLICKED)) {
                 wm.focus_idx = -1;
                 win_needs_redraw = 1;
         }
