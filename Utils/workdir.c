@@ -10,6 +10,14 @@
 #include <errno.h>
 #include <limits.h>
 
+char *get_homedir(void)
+{
+	char *HOMEDIR;
+	HOMEDIR = getenv("HOME");
+	HOMEDIR = (HOMEDIR != NULL) ? HOMEDIR : ".";
+	return HOMEDIR;
+}
+
 void cleanup_empty_files(const char *dirpath, int *total_deleted)
 {
         DIR *d;

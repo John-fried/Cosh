@@ -1,9 +1,9 @@
 # COSH - C-Operating System Shell
 
 CC      := gcc
-CFLAGS  := -Wall -Wextra -pedantic -O3 -march=native -std=gnu99 -DLOG_USE_COLOR
-LDFLAGS := -lpanelw -lncursesw -lutil -lvterm
-
+CFLAGS  := -Wall -Wextra -pedantic -O3 -march=native -std=gnu99 -IInclude -DLOG_USE_COLOR
+CFLAGS += -Wshadow -Wpointer-arith -Wstrict-prototypes
+LDFLAGS := -lpanelw -lncursesw -lutil -lvterm 
 # Installation Paths
 PREFIX  ?= /usr/local
 BINDIR  := $(PREFIX)/bin
@@ -13,10 +13,12 @@ DESTDIR ?=
 APP_DIR := Apps
 UTIL_DIR := Utils
 KERNEL_DIR := Kernel
-OBJ_DIR := .obj
+BUILD_DIR := build
+OBJ_DIR := $(BUILD_DIR)/obj
 
 # Files
-TARGET  := cosh
+TARGETNAME  := cosh
+TARGETPATH := $(BUILD_DIR)/$(TARGETNAME)
 
 # Core source files
 CORE_SRCS := $(wildcard ./*.c)
@@ -31,10 +33,11 @@ SRCS      := $(KERNEL_SRCS) $(CORE_SRCS) $(UTIL_SRCS) $(APP_SRCS)
 OBJS      := $(SRCS:%.c=$(OBJ_DIR)/%.o)
 
 # Default rule
-all: $(TARGET)
+all: $(TARGETPATH)
 
 # Linking
-$(TARGET): $(OBJS)
+$(TARGETPATH): $(OBJS)
+	@mkdir -p $(BUILD_DIR)
 	@echo "  LD      $@"
 	@$(CC) $(OBJS) -o $@ $(LDFLAGS)
 
@@ -47,17 +50,20 @@ $(OBJ_DIR)/%.o: %.c
 # Cleanup
 clean:
 	@echo "  CLEAN"
-	@rm -rf $(OBJ_DIR) $(TARGET)
+	@rm -rf $(BUILD_DIR)
 
 # Install
-install: $(TARGET)
-	@echo "  INSTALL $(DESTDIR)$(BINDIR)/$(TARGET)"
+install: $(TARGETPATH)
+	@echo "  INSTALL $(DESTDIR)$(BINDIR)/$(TARGETNAME)"
 	@mkdir -p $(DESTDIR)$(BINDIR)
-	@install -m 755 $(TARGET) $(DESTDIR)$(BINDIR)/$(TARGET)
+	@install -m 755 $(TARGETPATH) $(DESTDIR)$(BINDIR)/$(TARGETNAME)
 
 # Uninstall
 uninstall:
-	@echo "  UNINSTALL $(DESTDIR)$(BINDIR)/$(TARGET)"
-	@rm -f $(DESTDIR)$(BINDIR)/$(TARGET)
+	@echo "  UNINSTALL $(DESTDIR)$(BINDIR)/$(TARGETNAME)"
+	@rm -f $(DESTDIR)$(BINDIR)/$(TARGETNAME)
+
+size: $(TARGETPATH)
+	@size $(TARGETPATH)
 
 .PHONY: all clean install uninstall

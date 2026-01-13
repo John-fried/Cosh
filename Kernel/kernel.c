@@ -1,8 +1,12 @@
 #include "kernel.h"
+
+char WORKDIR[PATH_MAX];
 struct workdir_state *wstate = NULL;
 
 int k_boot(void)
 {
+	sprintf(WORKDIR, "%s/%s/%s", get_homedir(), XDG_DATA_DEF, WORKDIR_NAME);
+
         struct stat sb;
         setlocale(LC_ALL, "");
 
@@ -10,7 +14,10 @@ int k_boot(void)
 
         if (lstat(WORKDIR, &sb) == -1) {
                 k_log_info("Workdir uninitialized: %s", strerror(errno));
-                mkdir(WORKDIR, 0755);
+                if (mkdir(WORKDIR, 0755) != 0) {
+			k_log_fatal("Failed to create workdir in %s: %s", WORKDIR, strerror(errno));
+			return -1;
+		}
         } else {
                 if (S_ISREG(sb.st_mode)) {
                         k_log_error
@@ -20,7 +27,7 @@ int k_boot(void)
                 }
 
         }
-        k_log_info("Workdir is ready");
+        k_log_info("Workdir ready at: %s", WORKDIR);
 
         k_log_trace("Preparing for workdir state...");
         wstate = malloc(sizeof(*wstate));

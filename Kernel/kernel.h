@@ -4,11 +4,14 @@
 #include "log.h"
 #include "../wmcurses.h"
 #include "../util.h"
-#include "../configuration.h"
+#include "XDGPATH.h"
+#include "configuration.h"
 
 #include <errno.h>
 #include <sys/stat.h>
+#include <string.h>
 #include <locale.h>
+#include <limits.h>
 #include <errno.h>
 #include <sys/time.h>
 #include <dirent.h>
@@ -23,6 +26,7 @@ int k_get_workdir_usage(void);
 int k_boot(void);
 void k_shutdown(void);
 
+extern char WORKDIR[PATH_MAX];
 extern struct workdir_state *wstate;
 
 #endif                          /* KERNEL_H */

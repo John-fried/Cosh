@@ -4,12 +4,11 @@
 #ifndef CONFIGURATION_H
 #define CONFIGURATION_H
 
-#define TARGET_FPS 60           /* TARGET FPS For redraw in your terminal */
+#define TARGET_FPS 60           /* TARGET FPS For redraw tick in your terminal */
 #define TICK_DELAY (1000 / TARGET_FPS)
-#define WORKDIR		".cosh" /* all workdir state folder */
+#define WORKDIR_NAME "cosh"	/* The name of workdir, its based on ~/.local/share/WORKDIR_NAME */
 
-
-#define WIN_MAX		32	/* How much window max */
+#define WIN_MAX		32	/* Maximal open window */
 #define MODIFIER_KEY    27      /* ALT - ALT ... COMBINE */
 
 #endif                          /* CONFIGURATION_H */
