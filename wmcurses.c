@@ -577,7 +577,9 @@ void win_handle_mouse(void)
                 if (ev.y >= w->y && ev.y < (w->y + w->h) &&
                     ev.x >= w->x && ev.x < (w->x + w->w)) {
 
-                        win_raise(i);
+                        if (!(wm.stack[wm.focus_idx]->flags & WIN_FLAG_FULLSCREEN))
+				win_raise(i);
+
                         w->last_seq = WIN_SEQ_NONE;
 
                        /* Handle Clicks */
