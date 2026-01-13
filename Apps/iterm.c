@@ -256,43 +256,32 @@ void app_iterm_input(cosh_win_t *win, int ch)
 
         win->scroll_cur = win->scroll_max;
 
-        if (ch >= KEY_MIN && ch <= KEY_MAX) {
-                VTermKey k = VTERM_KEY_NONE;
-                switch (ch) {
-                case KEY_UP:
-                        k = VTERM_KEY_UP;
-                        break;
-                case KEY_DOWN:
-                        k = VTERM_KEY_DOWN;
-                        break;
-                case KEY_LEFT:
-                        k = VTERM_KEY_LEFT;
-                        break;
-                case KEY_RIGHT:
-                        k = VTERM_KEY_RIGHT;
-                        break;
-                case KEY_BACKSPACE:
-                        k = VTERM_KEY_BACKSPACE;
-                        break;
-                case KEY_ENTER:
-                case 10:
-                        k = VTERM_KEY_ENTER;
-                        break;
-                }
-                if (k != VTERM_KEY_NONE)
-                        vterm_keyboard_key(self->vt, k, VTERM_MOD_NONE);
-        } else {
-                vterm_keyboard_unichar(self->vt, (uint32_t) ch, VTERM_MOD_NONE);
-        }
+	if (ch >= KEY_MIN && ch <= KEY_MAX) {
+		VTermKey k = VTERM_KEY_NONE;
+		switch (ch) {
+		    case KEY_UP:        k = VTERM_KEY_UP; break;
+		    case KEY_DOWN:      k = VTERM_KEY_DOWN; break;
+		    case KEY_LEFT:      k = VTERM_KEY_LEFT; break;
+		    case KEY_RIGHT:     k = VTERM_KEY_RIGHT; break;
+		    case KEY_BACKSPACE: k = VTERM_KEY_BACKSPACE; break;
+		    case KEY_DC:        k = VTERM_KEY_DEL; break;
+		    case KEY_IC:        k = VTERM_KEY_INS; break;
+		    case KEY_HOME:      k = VTERM_KEY_HOME; break;
+		    case KEY_END:       k = VTERM_KEY_END; break;
+		    case KEY_PPAGE:     k = VTERM_KEY_PAGEUP; break;
+		    case KEY_NPAGE:     k = VTERM_KEY_PAGEDOWN; break;
+		    case KEY_ENTER:
+		    case 10:            k = VTERM_KEY_ENTER; break;
+		}
+		if (k != VTERM_KEY_NONE)
+		    vterm_keyboard_key(self->vt, k, VTERM_MOD_NONE);
+	} else {
+		vterm_keyboard_unichar(self->vt, (uint32_t) ch, VTERM_MOD_NONE);
+	}
 
-        char out[128];
-        size_t len = vterm_output_read(self->vt, out, sizeof(out));
-        if (len > 0)
-                (void)write(self->fd, out, len);
-
- send_output:{
-                char out[128];
-                size_t len = vterm_output_read(self->vt, out, sizeof(out));
+send_output:{
+		char out[128];
+		size_t len = vterm_output_read(self->vt, out, sizeof(out));
                 if (len > 0)
                         (void)write(self->fd, out, len);
         }
