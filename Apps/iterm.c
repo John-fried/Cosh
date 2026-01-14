@@ -243,7 +243,6 @@ void app_iterm_tick(cosh_win_t *win)
 				if (self->history) {
 				        for (int i = 0; i < HIST_SIZE; i++)
 						free_line(&self->history[i]);
-					free(self->history);
 				}
 
 				win_clear(win);
@@ -385,7 +384,7 @@ void app_iterm_render(cosh_win_t *win)
 						CP_CURSOR : get_pair(self, get_color_idx(cell.fg), get_color_idx(cell.bg));
 
 					win_attron(win, p);
-					draw_cell(win->ptr, r + 1, c + 1, cell.chars, p);
+					draw_cell(win->ptr, r + 1, c + 2, cell.chars, p);
 					win_attroff(win, p);
 				}
 			}
