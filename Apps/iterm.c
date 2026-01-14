@@ -63,7 +63,7 @@ static const struct {
     size_t len;
 } clear_screen_seq[] = {
     {"\x1b[2J", 4},      /* Standard Clear */
-    {"\x1b[H\x1b[2J", 7} /* Home + Clear */
+    {"\x1b[H\x1b[2J", 7}, /* Home + Clear */
     {"\033[2J", 4},
     {"\033[H\x1b[2J", 7}
 };
