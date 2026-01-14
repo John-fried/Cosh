@@ -58,6 +58,17 @@ static const struct {
     {"\033[?47h",   6}
 };
 
+static const struct {
+    const char *seq;
+    size_t len;
+} clear_screen_seq[] = {
+    {"\x1b[2J", 4},      /* Standard Clear */
+    {"\x1b[H\x1b[2J", 7} /* Home + Clear */
+    {"\033[2J", 4},
+    {"\033[H\x1b[2J", 7}
+};
+
+
 /*  Internal Helpers  */
 
 static inline int get_color_idx(VTermColor c)
@@ -221,10 +232,28 @@ void app_iterm_tick(cosh_win_t *win)
 
         ssize_t n = read(self->fd, buf, sizeof(buf));
         if (n > 0) {
+		size_t j = 0;
+
+		size_t clear_seq_count = sizeof(clear_screen_seq) / sizeof(clear_screen_seq[0]);
+		for (j = 0; j < clear_seq_count; j++) {
+			if (memmem(buf, n, clear_screen_seq[j].seq, clear_screen_seq[j].len)) {
+				self->hist_cnt = 0;
+				self->hist_head = 0;
+
+				if (self->history) {
+				        for (int i = 0; i < HIST_SIZE; i++)
+						free_line(&self->history[i]);
+					free(self->history);
+				}
+
+				win_clear(win);
+			}
+		}
+
 		/* This is fucking shit best */
 		size_t altscreen_open_count = sizeof(altscreen_open_seq) / sizeof(altscreen_open_seq[0]);
-		for (size_t i = 0; i < altscreen_open_count; i++) {
-			if (memmem(buf, n, altscreen_open_seq[i].seq, altscreen_open_seq[i].len)) {
+		for (j = 0; j < altscreen_open_count; j++) {
+			if (memmem(buf, n, altscreen_open_seq[j].seq, altscreen_open_seq[j].len)) {
 				if (!self->is_altscreen) {
 					self->is_altscreen = 1;
 					win->scroll_cur = 0;
