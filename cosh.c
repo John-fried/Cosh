@@ -172,6 +172,10 @@ int main(void)
                 if (terminal_resized)
                         win_handle_resize();
 
+		for (int i = 0; i < wm.count; i++)
+			if (wm.stack[i]->tick_cb)
+				wm.stack[i]->tick_cb(wm.stack[i]);
+
                 if (win_needs_redraw)
                         win_refresh_all();
 
@@ -185,11 +189,8 @@ int main(void)
 				}
 				dispatch_input(ch);
 			}
-                } else {
-			/* Usefull to see update */
-                        win_needs_redraw = 1;
                 }
-        }
+	}
 	
 	return 0;
 

@@ -280,6 +280,8 @@ void app_iterm_tick(cosh_win_t *win)
 		}
 
                 vterm_input_write(self->vt, buf, (size_t)n);
+		win->dirty = 1;
+		win_needs_redraw = 1;
 	} else if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK)
                 self->active = 0;
 }
