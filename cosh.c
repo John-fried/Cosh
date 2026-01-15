@@ -215,11 +215,9 @@ int main(void)
 			int current_pfd = 1;
 			for (int i = 0; i < wm.count; i++) {
 				if (wm.stack[i]->poll_fd >= 0) {
-					if (pfds[current_pfd].revents & POLLIN) {
+					if (pfds[current_pfd].revents & (POLLIN | POLLHUP | POLLERR)) {
 						if (wm.stack[i]->tick_cb)
-							wm.stack[i]->tick_cb(wm.
-									     stack
-									     [i]);
+							wm.stack[i]->tick_cb(wm.stack[i]);
 					}
 					current_pfd++;
 				}

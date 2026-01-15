@@ -83,7 +83,7 @@ void wm_init(void)
         init_pair(CP_TOS_STD, COLOR_BLUE, COLOR_WHITE);
 	init_pair(CP_TOS_HDR, COLOR_WHITE, can_change_color() ? COLOR_HDR_BLUE : COLOR_BLUE);
         init_pair(CP_TOS_ACC, COLOR_RED, COLOR_WHITE);
-        init_pair(CP_TOS_BAR, COLOR_WHITE, COLOR_BLUE);
+        init_pair(CP_TOS_BAR, COLOR_WHITE, COLOR_RED);
         init_pair(CP_TOS_HDR_UNF, COLOR_WHITE, COLOR_GREY);
         init_pair(CP_WIN_BG, COLOR_CYAN, COLOR_CYAN);
 	init_pair(CP_TOS_DRAG, COLOR_BLACK, COLOR_GREEN);
@@ -341,8 +341,9 @@ static void win_render_frame(cosh_win_t *win, int is_focused)
         for (int i = 1; i < win->w - 1; i++)
                 mvwaddch(win->ptr, 0, i, ' ');
 
-	// render title
-	char title_buf[win->vw];
+	//render title
+	//5 for [ X ]
+	char title_buf[win->vw - 5];
 	memcpy(title_buf, win->title, sizeof(title_buf) - 1);
         mvwprintw(win->ptr, 0, 2, " %s ", title_buf);
 
@@ -489,11 +490,16 @@ void win_toggle_fullscreen(cosh_win_t *win)
 }
 
 /**
- * win_destroy_focused - Clean up current window and its panel
+ * win_destroy - destroy window
  */
-void win_destroy_focused(void)
+void win_destroy(cosh_win_t *win)
 {
-        int idx = wm.focus_idx;
+	int idx = -1;
+
+	for (int i = 0; i < wm.count; i++)
+		if (wm.stack[i] == win)
+			idx = i;
+
         if (idx < 0 || idx >= wm.count)
                 return;
 
@@ -516,6 +522,16 @@ void win_destroy_focused(void)
                 top_panel(wm.stack[wm.focus_idx]->panel);
 
         win_needs_redraw = 1;
+
+}
+
+/**
+ * win_destroy_focused - Clean up current window and its panel
+ */
+void win_destroy_focused(void)
+{
+        int idx = wm.focus_idx;
+	win_destroy(wm.stack[idx]);
 }
 
 /**

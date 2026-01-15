@@ -23,6 +23,7 @@
 typedef struct {
         uint32_t chars[MAX_CELL_CHARS];
         int fg, bg;
+	VTermScreenCellAttrs attrs;
 } iterm_cell_t;
 
 typedef struct {
@@ -76,15 +77,20 @@ static inline int get_color_idx(VTermColor c)
 
 static int get_pair(iterm_t *self, int vfg, int vbg)
 {
-        int fg = (vfg >= 0 && vfg < 256) ? vfg : COLOR_WHITE;
-        int bg = (vbg >= 0 && vbg < 256) ? vbg : COLOR_BLACK;
+    (void) self;
+    int fg = (vfg >= 0 && vfg < 256) ? vfg : -1;
+    int bg = (vbg >= 0 && vbg < 256) ? vbg : -1;
 
-        if (self->pairs[fg][bg] == 0) {
-                int p = CP_WIN_START + 100 + (fg * 16 + bg);
-                init_pair(p, fg, bg);
-                self->pairs[fg][bg] = p;
-        }
-        return self->pairs[fg][bg];
+    if (fg == -1 && bg == -1) return CP_WIN_START;
+
+    int p_idx = (vfg + 1) * 257 + (vbg + 1); 
+    int p = CP_WIN_START + 100 + (p_idx % 20000);
+    static int initialized[20000] = {0};
+    if (!initialized[p_idx % 20000]) {
+        init_pair(p, fg, bg);
+        initialized[p_idx % 20000] = 1;
+    }
+    return p;
 }
 
 /*  History Management  */
@@ -126,6 +132,7 @@ static int cb_sb_pushline(int cols, const VTermScreenCell *cells, void *user)
                        sizeof(uint32_t) * MAX_CELL_CHARS);
                 self->history[idx].cells[i].fg = get_color_idx(cells[i].fg);
                 self->history[idx].cells[i].bg = get_color_idx(cells[i].bg);
+		self->history[idx].cells[i].attrs = cells[i].attrs;
         }
 
         self->hist_head = idx;
@@ -167,8 +174,9 @@ static int cb_settermprop(VTermProp prop, VTermValue *val, void *user)
         iterm_t *self = (iterm_t *) win->priv;
 
 	if (prop == VTERM_PROP_TITLE) {
+		//handle manual len, val->string didnt know where to end
 		VTermStringFragment frag = val->string;
-		char *title_buf[64];
+		char title_buf[64];
 		size_t safe_len = (frag.len < sizeof(title_buf) - 1) ? frag.len : sizeof(title_buf) - 1;
 
 		memcpy(title_buf, frag.str, safe_len);
@@ -213,8 +221,11 @@ static void iterm_sync_size(cosh_win_t *win)
                 kill(self->pid, SIGWINCH);
 }
 
-static void iterm_spawn(iterm_t *self, int r, int c)
+static void iterm_spawn(iterm_t *self, cosh_win_t *win)
 {
+	int r = win->vh;
+	int c = win->vw;
+
         struct winsize ws = {.ws_row = (unsigned short)r,.ws_col =
                     (unsigned short)c
         };
@@ -223,7 +234,12 @@ static void iterm_spawn(iterm_t *self, int r, int c)
         if (self->pid == 0) {
                 setenv("TERM", "xterm-256color", 1);
                 setenv("LANG", "en_US.UTF-8", 1);
-                execl("/bin/bash", "bash", NULL);
+		char *SHELL = getenv("SHELL");
+
+		if (!SHELL)
+			SHELL = "/bin/bash";
+
+                execl(SHELL, SHELL, NULL);
                 _exit(1);
         }
 
@@ -242,6 +258,13 @@ void app_iterm_tick(cosh_win_t *win)
                 return;
 
         ssize_t n = read(self->fd, buf, sizeof(buf));
+
+	//close window on exit
+	if (n == 0 || (n < 0 && errno == EIO)) {
+		win_destroy(win);
+		return;
+	}
+
         if (n > 0) {
 		size_t j = 0;
 
@@ -365,24 +388,30 @@ send_output:{
         }
 }
 
-static void draw_cell(WINDOW *w, int y, int x, uint32_t *chars, int pair)
+static void draw_cell(WINDOW *w, int y, int x, uint32_t *chars, int pair, VTermScreenCell attrs)
 {
-        cchar_t wc;
-        wchar_t wstr[MAX_CELL_CHARS + 1];
+    cchar_t wc;
+    wchar_t wstr[MAX_CELL_CHARS + 1];
+    attr_t n_attrs = A_NORMAL;
+
+    // Attrmap
+    if (attrs.attrs.bold)      n_attrs |= A_BOLD;
+    if (attrs.attrs.underline) n_attrs |= A_UNDERLINE;
+    if (attrs.attrs.reverse)   n_attrs |= A_REVERSE;
+    if (attrs.attrs.blink)     n_attrs |= A_BLINK;
+
+    if (chars[0] == 0) {
+        wstr[0] = L' ';
+        wstr[1] = L'\0';
+    } else {
         int i;
+        for (i = 0; i < MAX_CELL_CHARS && chars[i]; i++)
+            wstr[i] = (wchar_t)chars[i];
+        wstr[i] = L'\0';
+    }
 
-        /* If codepoint is 0 or invalid, render a space to avoid ^@ artifacts */
-        if (chars[0] == 0) {
-                wstr[0] = L' ';
-                wstr[1] = L'\0';
-        } else {
-                for (i = 0; i < MAX_CELL_CHARS && chars[i]; i++)
-                        wstr[i] = (wchar_t)chars[i];
-                wstr[i] = L'\0';
-        }
-
-        if (setcchar(&wc, wstr, A_NORMAL, (short)pair, NULL) == OK)
-                mvwadd_wch(w, y, x, &wc);
+    if (setcchar(&wc, wstr, n_attrs, (short)pair, NULL) == OK)
+        mvwadd_wch(w, y, x, &wc);
 }
 
 void app_iterm_render(cosh_win_t *win)
@@ -411,7 +440,7 @@ void app_iterm_render(cosh_win_t *win)
 						CP_CURSOR : get_pair(self, get_color_idx(cell.fg), get_color_idx(cell.bg));
 
 					win_attron(win, p);
-					draw_cell(win->ptr, r + 1, c + 2, cell.chars, p);
+					draw_cell(win->ptr, r + 1, c + 2, cell.chars, p, cell);
 					win_attroff(win, p);
 				}
 			}
@@ -434,14 +463,17 @@ void app_iterm_render(cosh_win_t *win)
 			iterm_line_t *l = &self->history[hidx];
 
 			if (l && l->cells) {
-				for (int c = 0; c < cols && c < l->cols; c++) {
-					int p = get_pair(self, l->cells[c].fg,
-							 l->cells[c].bg);
-					win_attron(win, p);
-					draw_cell(win->ptr, r + 1, c + 2,
-						  l->cells[c].chars, p);
-					win_attroff(win, p);
-				}
+			    for (int c = 0; c < cols && c < l->cols; c++) {
+				int p = get_pair(self, l->cells[c].fg, l->cells[c].bg);
+				
+				VTermScreenCell tmp_cell = {0};
+				memcpy(tmp_cell.chars, l->cells[c].chars, sizeof(tmp_cell.chars));
+				tmp_cell.attrs = l->cells[c].attrs;
+
+				win_attron(win, p);
+				draw_cell(win->ptr, r + 1, c + 2, l->cells[c].chars, p, tmp_cell);
+				win_attroff(win, p);
+			    }
 			}
 			continue;
 		}
@@ -465,7 +497,7 @@ void app_iterm_render(cosh_win_t *win)
 
 				win_attron(win, p);
 				draw_cell(win->ptr, r + 1, pos.col + 2,
-					  cell.chars, p);
+					  cell.chars, p, cell);
 				win_attroff(win, p);
 			}
 		}
@@ -519,7 +551,7 @@ void win_spawn_iterm(void)
         vterm_screen_set_callbacks(self->vts, &screen_cbs, win);
         vterm_screen_reset(self->vts, 1);
 
-        iterm_spawn(self, win->vh, win->vw);
+        iterm_spawn(self, win);
 	win->poll_fd = self->fd; 
 
         win_setopt(win, WIN_OPT_PRIV, self);

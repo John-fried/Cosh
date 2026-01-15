@@ -136,10 +136,11 @@ cosh_win_t *win_create(int h, int w, int flags);
 void win_setopt(cosh_win_t * win, win_opt_t opt, ...);
 
 void wm_cleanup_before_exit(void);
+void win_destroy(cosh_win_t *win);
 void win_destroy_focused(void);
 void win_raise(int idx);
 void win_vibrate(void);
-void win_toggle_fullscreen(cosh_win_t * win);
+void win_toggle_fullscreen(cosh_win_t *win);
 void win_resize_focused(int dh, int dw);
 void win_handle_resize(void);
 void win_ding(void);
