@@ -26,6 +26,7 @@ void win_spawn_help(void)
         if (!win)
                 return;
 
-        win_setopt(win, WIN_OPT_TITLE, "Quick Help");
+        win_setopt(win, WIN_OPT_APPNAME, "Guide");
+        win_setopt(win, WIN_OPT_TITLE, "Guide");
         win_setopt(win, WIN_OPT_RENDER, app_help_render);
 }

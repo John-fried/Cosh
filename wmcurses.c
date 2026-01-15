@@ -266,8 +266,11 @@ void win_setopt(cosh_win_t *win, win_opt_t opt, ...)
 
         va_start(ap, opt);
         switch (opt) {
+ 	case WIN_OPT_APPNAME:
+		strncpy(win->name, va_arg(ap, char*), sizeof(win->name) - 1);
+		break;
         case WIN_OPT_TITLE:
-                strncpy(win->title, va_arg(ap, char *), 31);
+                strncpy(win->title, va_arg(ap, char *), sizeof(win->title) - 1);
                 break;
         case WIN_OPT_RENDER:
                 win->render_cb = va_arg(ap, render_fn);
@@ -669,7 +672,7 @@ static void draw_statusbar(void)
 
 	char status_right[64];
 	snprintf(status_right, sizeof(status_right), "[%s] ",
-		 wm.focus_idx >= 0 ? wm.stack[wm.focus_idx]->title : "Desktop");
+		 wm.focus_idx >= 0 ? wm.stack[wm.focus_idx]->name : "Desktop");
 
 	attron(COLOR_PAIR(CP_TOS_BAR));
 	mvhline(LINES - 1, 0, ' ', COLS);

@@ -23,7 +23,8 @@
 
 /* Options for win_setopt */
 typedef enum {
-        WIN_OPT_TITLE = 1,
+	WIN_OPT_APPNAME = 0,
+        WIN_OPT_TITLE = 1, /* for window display */
         WIN_OPT_RENDER = 2,
         WIN_OPT_INPUT = 3,
         WIN_OPT_FG = 4,
@@ -81,7 +82,10 @@ typedef struct {
 typedef struct cosh_win {
         WINDOW *ptr;
         PANEL *panel;           /* ncurses panel integration */
-        char title[32];
+
+        char name[32];
+        char title[64];
+
         int x, y, w, h;
         int vw, vh;
         int rx, ry, rw, rh;     /* Restoration coordinates */

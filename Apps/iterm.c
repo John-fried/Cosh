@@ -166,6 +166,17 @@ static int cb_settermprop(VTermProp prop, VTermValue *val, void *user)
         cosh_win_t *win = (cosh_win_t *) user;
         iterm_t *self = (iterm_t *) win->priv;
 
+	if (prop == VTERM_PROP_TITLE) {
+		VTermStringFragment frag = val->string;
+		char *title_buf[64];
+		size_t safe_len = (frag.len < sizeof(title_buf) - 1) ? frag.len : sizeof(title_buf) - 1;
+
+		memcpy(title_buf, frag.str, safe_len);
+		title_buf[safe_len] = '\0';
+
+		win_setopt(win, WIN_OPT_TITLE, title_buf);
+	}
+
 	/* just handle closing altscreen only */
         if (prop == VTERM_PROP_ALTSCREEN && !val->boolean) {
 		self->is_altscreen = 0;
@@ -182,7 +193,7 @@ static VTermScreenCallbacks screen_cbs = {
         .damage = cb_damage,
         .sb_pushline = cb_sb_pushline,
         .movecursor = cb_movecursor,
-        .settermprop = cb_settermprop
+        .settermprop = cb_settermprop,
 };
 
 /*  Lifecycle  */
@@ -512,6 +523,7 @@ void win_spawn_iterm(void)
 	win->poll_fd = self->fd; 
 
         win_setopt(win, WIN_OPT_PRIV, self);
+        win_setopt(win, WIN_OPT_APPNAME, "Terminal");
         win_setopt(win, WIN_OPT_TITLE, "Terminal");
         win_setopt(win, WIN_OPT_RENDER, app_iterm_render);
         win_setopt(win, WIN_OPT_INPUT, app_iterm_input);

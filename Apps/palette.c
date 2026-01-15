@@ -191,7 +191,8 @@ void win_spawn_palette(void)
                 return;
         }
 
-        win_setopt(win, WIN_OPT_TITLE, "Apps Palette");
+        win_setopt(win, WIN_OPT_APPNAME, "Apps Palette");
+        win_setopt(win, WIN_OPT_TITLE, "Palette");
         win_setopt(win, WIN_OPT_RENDER, app_palette_render);
         win_setopt(win, WIN_OPT_INPUT, app_palette_input);
         win_setopt(win, WIN_OPT_PRIV, st);
