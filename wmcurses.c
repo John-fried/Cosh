@@ -242,6 +242,8 @@ void win_handle_resize(void)
 
                 w->dirty = 1;
         }
+
+	win_needs_redraw = 1;
 }
 
 /**
