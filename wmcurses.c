@@ -339,7 +339,10 @@ static void win_render_frame(cosh_win_t *win, int is_focused)
         for (int i = 1; i < win->w - 1; i++)
                 mvwaddch(win->ptr, 0, i, ' ');
 
-        mvwprintw(win->ptr, 0, 2, " %s ", win->title);
+	// render title
+	char title_buf[win->vw];
+	memcpy(title_buf, win->title, sizeof(title_buf) - 1);
+        mvwprintw(win->ptr, 0, 2, " %s ", title_buf);
 
         if (!(win->flags & WIN_FLAG_LOCKED)) {
                 wattron(win->ptr, COLOR_PAIR(CP_TOS_ACC));
@@ -362,11 +365,7 @@ static void win_render_frame(cosh_win_t *win, int is_focused)
                 if (bar_y > win->vh)
                         bar_y = win->vh;
 
-                wattron(win->ptr,
-                        COLOR_PAIR(is_focused ? CP_TOS_HDR : CP_TOS_HDR_UNF));
                 mvwaddstr(win->ptr, bar_y, bar_x, "█");
-                wattroff(win->ptr,
-                         COLOR_PAIR(is_focused ? CP_TOS_HDR : CP_TOS_HDR_UNF));
         }
 }
 
