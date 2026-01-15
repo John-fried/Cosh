@@ -4,7 +4,7 @@
 #ifndef CONFIGURATION_H
 #define CONFIGURATION_H
 
-#define TARGET_FPS 60           /* TARGET FPS For redraw tick in your terminal */
+#define TARGET_FPS 30           /* TARGET FPS For redraw tick in your terminal */
 #define TICK_DELAY (1000 / TARGET_FPS)
 #define WORKDIR_NAME "cosh"	/* The name of workdir, its based on ~/.local/share/WORKDIR_NAME */
 

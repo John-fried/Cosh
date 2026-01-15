@@ -32,7 +32,7 @@ typedef enum {
         WIN_OPT_DESTROY = 7,
         WIN_OPT_TICK = 8,
         WIN_OPT_RESIZE = 9,
-        WIN_OPT_CURSOR = 10
+        WIN_OPT_CURSOR = 10,
 } win_opt_t;
 
 typedef enum {

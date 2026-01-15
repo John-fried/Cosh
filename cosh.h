@@ -5,6 +5,8 @@
 #include "Kernel/kernel.h"
 #include "util.h"
 
+#include <string.h>
+#include <errno.h>
 #include <poll.h>
 #include "configuration.h"
 

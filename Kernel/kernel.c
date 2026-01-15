@@ -27,7 +27,7 @@ int k_boot(void)
                 }
 
         }
-        k_log_info("Workdir ready at: %s", WORKDIR);
+        k_log_info("Workdir is ready %s", WORKDIR);
 
         k_log_trace("Preparing for workdir state...");
         wstate = malloc(sizeof(*wstate));
@@ -37,10 +37,12 @@ int k_boot(void)
         }
         k_log_info("Workdir state ready");
 
-        k_log_trace("Initializing Graphic...");
-        wm_init();              /* Init TUI */
-
         return 0;
+}
+
+void k_start(void) {
+        k_log_trace("Initializing interface...");
+        wm_init();              /* Init TUI */
 }
 
 void k_shutdown(void)

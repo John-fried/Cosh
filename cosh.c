@@ -9,8 +9,13 @@ int app_count = 0;
 
 void register_app(const char *name, void (*spawn)(void))
 {
-        k_log_trace("	Registered app: %s", name);
         app_entry_t *new_app = malloc(sizeof(app_entry_t));
+
+	if (!new_app) {
+		k_log_error("Failed to load software '%s': %s", name, strerror(errno));
+		return;
+	}
+
         new_app->name = strdup(name);
         new_app->spawn = spawn;
         new_app->score = 0;
@@ -22,13 +27,13 @@ void register_app(const char *name, void (*spawn)(void))
 
 void app_shutdown_render(cosh_win_t *win)
 {
-        mvwprintw(win->ptr, 1, (win->w - 16) / 2, "CONFIRM SHUTDOWN");
+        mvwprintw(win->ptr, 2, (win->w - 16) / 2, "CONFIRM SHUTDOWN");
         mvwprintw(win->ptr, 3, (win->w - 22) / 2, "Press [y] Yes | [n] No");
 }
 
 int confirm_shutdown(void)
 {
-        int h = 5, w = 40, res = 0;
+        int h = 6, w = 40, res = 0;
         cosh_win_t *dlg = win_create(h, w, WIN_FLAG_LOCKED);
         if (!dlg)
                 return 0;
@@ -119,8 +124,7 @@ static void dispatch_input(int ch)
                 win_handle_mouse();
                 break;
         case '\t':
-                if (wm.count > 1)
-                        win_raise(0);
+                win_raise(0);
                 break;
         default:
                 if (f && f->input_cb) {
@@ -144,6 +148,9 @@ int boot(void)
         register_app("Palette", win_spawn_palette);
         register_app("Guide", win_spawn_help);
 
+	/* start the kernel */
+	k_start();
+
         return 0;
 }
 
@@ -159,7 +166,6 @@ int main(void)
 
         win_spawn_iterm();
         win_toggle_fullscreen(wm.stack[wm.focus_idx]);
-
         win_spawn_help();
 
         while (1) {

@@ -27,6 +27,7 @@ struct workdir_state {
 int k_get_workdir_usage(void);
 long k_self_get_rss(void);
 int k_boot(void);
+void k_start(void);
 void k_shutdown(void);
 
 extern char WORKDIR[PATH_MAX];

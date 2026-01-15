@@ -93,7 +93,7 @@ void wm_init(void)
 
 void wm_cleanup_before_exit(void)
 {
-	printf("\033[?1002l");
+	printf("\033[?1049l\033[?1002l\033[?25h");
 	fflush(stdout);
 }
 /**
@@ -316,12 +316,12 @@ static void win_render_frame(cosh_win_t *win, int is_focused)
         cchar_t ls, rs, ts, bs, tl, tr, bl, br;
 
 	if (is_focused) {
-	    SET_CHW(ls, L"║"); SET_CHW(rs, L"║");
+	    SET_CHW(ls, L"║"); SET_CHW(rs, (win->scroll_max > 0) ? L"▒" : L"║");
 	    SET_CHW(ts, L"═"); SET_CHW(bs, L"═");
 	    SET_CHW(tl, L"╔"); SET_CHW(tr, L"╗");
 	    SET_CHW(bl, L"╚"); SET_CHW(br, L"╝");
 	} else {
-	    SET_CHW(ls, L"│"); SET_CHW(rs, L"│");
+	    SET_CHW(ls, L"│"); SET_CHW(rs, (win->scroll_max > 0) ? L"▒" : L"│");
 	    SET_CHW(ts, L"─"); SET_CHW(bs, L"─");
 	    SET_CHW(tl, L"┌"); SET_CHW(tr, L"┐");
 	    SET_CHW(bl, L"└"); SET_CHW(br, L"┘");
@@ -359,7 +359,7 @@ static void win_render_frame(cosh_win_t *win, int is_focused)
 
                 wattron(win->ptr,
                         COLOR_PAIR(is_focused ? CP_TOS_HDR : CP_TOS_HDR_UNF));
-                mvwaddstr(win->ptr, bar_y, bar_x, "┃");
+                mvwaddstr(win->ptr, bar_y, bar_x, "█");
                 wattroff(win->ptr,
                          COLOR_PAIR(is_focused ? CP_TOS_HDR : CP_TOS_HDR_UNF));
         }
@@ -671,10 +671,9 @@ static void draw_statusbar(void)
 static void draw_desktop(void)
 {
 	attron(COLOR_PAIR(CP_WIN_BG));
-	for (int y = 0; y < LINES - 1; y++) {
-        mvhline(y, 0, '.', COLS); 
-    }
-    attroff(COLOR_PAIR(CP_WIN_BG));
+	for (int y = 0; y < LINES - 1; y++)
+		mvhline(y, 0, ' ', COLS); 
+	attroff(COLOR_PAIR(CP_WIN_BG));
 }
 
 /**

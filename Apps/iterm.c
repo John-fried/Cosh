@@ -15,7 +15,7 @@
 #include <utmp.h>
 #include <pty.h>
 
-#define HIST_SIZE	4096
+#define HIST_SIZE	1024
 #define READ_BUF_SIZE	16384
 #define MAX_CELL_CHARS	6
 
@@ -49,23 +49,19 @@ static const struct {
 	const char *seq;
 	size_t len;
 } altscreen_open_seq[] = {
-    {"\x1b[?1049h", 8},
-    {"\x1b[?1047h", 8},
-    {"\x1b[?47h",   6},
-
-    {"\033[?1049h", 8},
-    {"\033[?1047h", 8},
-    {"\033[?47h",   6}
+	{"\x1b[?1049h", 8},
+	{"\x1b[?1047h", 8},
+	{"\x1b[?47h",   6},
 };
 
 static const struct {
-    const char *seq;
-    size_t len;
-} clear_screen_seq[] = {
-    {"\x1b[2J", 4},      /* Standard Clear */
-    {"\x1b[H\x1b[2J", 7}, /* Home + Clear */
-    {"\033[2J", 4},
-    {"\033[H\x1b[2J", 7}
+	const char *seq;
+	size_t len;
+	int id;
+} terminal_control_seq[] = {
+	{"\x1b[H",  3, 0}, /* home */
+	{"\x1b[2J", 4, 1}, /* soft clear */
+	{"\x1b[3J", 4, 2}, /* hard clear */
 };
 
 
@@ -111,8 +107,13 @@ static int cb_sb_pushline(int cols, const VTermScreenCell *cells, void *user)
         if (!self || !self->history || self->is_altscreen)
                 return 1;
 
+	/**
+	 * If hist_head reaches 1023, then (1023 + 1) % 1024 will return 0.
+	 * This forces the index back to the beginning to overwrite the oldest data.
+	 */
         int idx = (self->hist_head + 1) % HIST_SIZE;
 
+	//this if the idx = 0 and head at 1024, then: oldest data will be GONE
         free_line(&self->history[idx]);
         self->history[idx].cells = malloc(sizeof(iterm_cell_t) * cols);
         if (!self->history[idx].cells)
@@ -171,7 +172,6 @@ static int cb_settermprop(VTermProp prop, VTermValue *val, void *user)
                 win->scroll_cur = self->hist_cnt;
                 win->scroll_max = self->hist_cnt;
 
-                werase(win->ptr);
                 win->dirty = 1;
 		win_needs_redraw = 1;
         }
@@ -234,18 +234,32 @@ void app_iterm_tick(cosh_win_t *win)
         if (n > 0) {
 		size_t j = 0;
 
-		size_t clear_seq_count = sizeof(clear_screen_seq) / sizeof(clear_screen_seq[0]);
-		for (j = 0; j < clear_seq_count; j++) {
-			if (memmem(buf, n, clear_screen_seq[j].seq, clear_screen_seq[j].len)) {
-				self->hist_cnt = 0;
-				self->hist_head = 0;
+		size_t terminal_seq_count = sizeof(terminal_control_seq) / sizeof(terminal_control_seq[0]);
+		for (j = 0; j < terminal_seq_count; j++) {
+			if (memmem(buf, n, terminal_control_seq[j].seq, terminal_control_seq[j].len)) {
+				switch (terminal_control_seq[j].id) {
+					case 0: /* home */
+						win->dirty = 1;
+						break;
 
-				if (self->history) {
-				        for (int i = 0; i < HIST_SIZE; i++)
-						free_line(&self->history[i]);
+					case 1: /* soft clear */
+						werase(win->ptr);
+						win->dirty = 1;
+						break;
+
+					case 2:
+						self->hist_cnt = 0;
+						self->hist_head = 0;
+						if (self->history) {
+							for (int i = 0; i < HIST_SIZE; i++)
+								free_line(&self->history[i]);
+						}
+
+						win->scroll_cur = 0;
+						win->scroll_max = 0;
+						win->dirty = 1;
+						break;
 				}
-
-				win_clear(win);
 			}
 		}
 
@@ -489,12 +503,12 @@ void win_spawn_iterm(void)
         self->history = calloc(HIST_SIZE, sizeof(iterm_line_t));
         self->fd = -1;
 
-        win_setopt(win, WIN_OPT_PRIV, self);
         vterm_screen_set_callbacks(self->vts, &screen_cbs, win);
         vterm_screen_reset(self->vts, 1);
 
         iterm_spawn(self, win->vh, win->vw);
 
+        win_setopt(win, WIN_OPT_PRIV, self);
         win_setopt(win, WIN_OPT_TITLE, "Terminal");
         win_setopt(win, WIN_OPT_RENDER, app_iterm_render);
         win_setopt(win, WIN_OPT_INPUT, app_iterm_input);
