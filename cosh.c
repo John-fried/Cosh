@@ -74,6 +74,17 @@ static void dispatch_input(int ch)
 		int next = getch();
 		switch (next) {
 			/* Window Management */
+
+		// cycle
+		case CTRL('n'):
+		case '\t':
+			win_raise(0);
+			break;
+		case CTRL('p'):
+			if (wm.count > 1)
+				win_raise(wm.count - 2);
+			break;
+
 		case 'f':
 		case 'F':
 			if (f)
@@ -124,9 +135,6 @@ static void dispatch_input(int ch)
 	case KEY_MOUSE:
 		win_handle_mouse();
 		break;
-	case '\t':
-		win_raise(0);
-		break;
 	default:
 		if (f && f->input_cb) {
 			f->input_cb(f, ch);
@@ -145,7 +153,7 @@ int boot(void)
 		return -1;
 
 	k_log_trace("Preparing software...");
-	register_app("Adams Terminal", win_spawn_iterm);
+	register_app("Terminal", win_spawn_iterm);
 	register_app("Palette", win_spawn_palette);
 	register_app("Guide", win_spawn_help);
 

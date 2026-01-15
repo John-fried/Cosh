@@ -64,6 +64,8 @@ typedef enum {
 #define CP_WIN_BG	7
 #define CP_TOS_DRAG	8
 
+#define CP_REG_PURPLE	9
+
 #define CP_WIN_START	20      /* Where the start index for every window color pair */
 
 struct cosh_win;

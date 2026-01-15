@@ -88,6 +88,8 @@ void wm_init(void)
         init_pair(CP_WIN_BG, COLOR_CYAN, COLOR_CYAN);
 	init_pair(CP_TOS_DRAG, COLOR_BLACK, COLOR_GREEN);
 
+	init_pair(CP_REG_PURPLE, COLOR_MAGENTA, COLOR_WHITE);
+
         wbkgd(stdscr, COLOR_PAIR(CP_TOS_STD));
 }
 
