@@ -509,6 +509,7 @@ void win_spawn_iterm(void)
         vterm_screen_reset(self->vts, 1);
 
         iterm_spawn(self, win->vh, win->vw);
+	win->poll_fd = self->fd; 
 
         win_setopt(win, WIN_OPT_PRIV, self);
         win_setopt(win, WIN_OPT_TITLE, "Terminal");

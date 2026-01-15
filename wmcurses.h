@@ -91,6 +91,8 @@ typedef struct cosh_win {
         int flags;
         int fg, bg;             /* Cached colors */
 
+	int poll_fd;
+
         int scroll_max;
         int scroll_cur;
 

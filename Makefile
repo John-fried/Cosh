@@ -13,7 +13,7 @@ DESTDIR ?=
 APP_DIR := Apps
 UTIL_DIR := Utils
 KERNEL_DIR := Kernel
-BUILD_DIR := build
+BUILD_DIR := Build
 OBJ_DIR := $(BUILD_DIR)/obj
 
 # Files

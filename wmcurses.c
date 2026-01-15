@@ -646,28 +646,36 @@ void win_handle_mouse(void)
  */
 static void draw_statusbar(void)
 {
-        char time_str[16];
-        char status_left[128];
-        char status_right[64];
-        time_t now = time(NULL);
-        struct tm *t = localtime(&now);
+	static time_t last_s = 0;
+	static int cached_usage = 0;
+	static long cached_rss = 0;
+	static char status_left[128];
 
-        strftime(time_str, sizeof(time_str), "%H:%M:%S", t);
+	time_t now = time(NULL);
+	struct tm *t = localtime(&now);
 
-        snprintf(status_left, sizeof(status_left), " %s | Used: %d %ld(kb) | Open: %d",
-                 time_str, k_get_workdir_usage(), k_self_get_rss() / 1024, wm.count);
+	if (now != last_s) {
+		char time_str[16];
+		strftime(time_str, sizeof(time_str), "%H:%M:%S", t);
 
-        snprintf(status_right, sizeof(status_right), "[%s] ",
-                 wm.focus_idx >= 0 ? wm.stack[wm.focus_idx]->title : "Desktop");
+		cached_usage = k_get_workdir_usage();
+		cached_rss = k_self_get_rss() / 1024;
 
-        attron(COLOR_PAIR(CP_TOS_BAR));
-        mvhline(LINES - 1, 0, ' ', COLS);
-        mvaddstr(LINES - 1, 0, status_left);
+		snprintf(status_left, sizeof(status_left),
+			 " %s | Used: %d %ld(kb) | Open: %d", time_str,
+			 cached_usage, cached_rss, wm.count);
+		last_s = now;
+	}
 
-        int x_right = COLS - strlen(status_right);
-        mvaddstr(LINES - 1, x_right, status_right);
+	char status_right[64];
+	snprintf(status_right, sizeof(status_right), "[%s] ",
+		 wm.focus_idx >= 0 ? wm.stack[wm.focus_idx]->title : "Desktop");
 
-        attroff(COLOR_PAIR(CP_TOS_BAR));
+	attron(COLOR_PAIR(CP_TOS_BAR));
+	mvhline(LINES - 1, 0, ' ', COLS);
+	mvaddstr(LINES - 1, 0, status_left);
+	mvaddstr(LINES - 1, COLS - strlen(status_right), status_right);
+	attroff(COLOR_PAIR(CP_TOS_BAR));
 }
 
 static void draw_desktop(void)
@@ -695,8 +703,6 @@ void win_refresh_all(void)
 
         for (int i = 0; i < wm.count; i++) {
                 cosh_win_t *w = wm.stack[i];
-                if (w->tick_cb)
-                        w->tick_cb(w);
 
                 if (w->dirty) {
                         werase(w->ptr);
