@@ -83,22 +83,20 @@ void wm_init(void)
 	printf("\033[?1002h\n");	/* force, this is super good than 1003h */
 	fflush(stdout);
 
-	init_pair(CP_CURSOR, COLOR_BLACK, COLOR_WHITE);
-	init_pair(CP_TOS_STD, COLOR_BLUE, COLOR_WHITE);
-	init_pair(CP_TOS_HDR, COLOR_WHITE,
-		  can_change_color()? COLOR_HDR_BLUE : COLOR_BLUE);
-	init_pair(CP_TOS_ACC, COLOR_RED, COLOR_WHITE);
-	init_pair(CP_TOS_BAR, COLOR_WHITE, COLOR_RED);
-	init_pair(CP_TOS_HDR_UNF, COLOR_WHITE, COLOR_GREY);
-	init_pair(CP_WIN_BG, COLOR_CYAN, COLOR_CYAN);
-	init_pair(CP_TOS_DRAG, COLOR_BLACK, COLOR_GREEN);
+	init_pair(CP_WIN_BG, wm.configs.csh_desktop, wm.configs.csh_desktop);
+	init_pair(CP_TOS_STD, COLOR_WHITE, -1);
+	init_pair(CP_TOS_HDR, COLOR_CYAN, COLOR_BLACK);
+	init_pair(CP_TOS_HDR_UNF, COLOR_GREY, COLOR_BLACK); // Dimmed
+	init_pair(CP_TOS_BAR, COLOR_WHITE, wm.configs.csh_statusbar);
+	init_pair(CP_TOS_ACC, COLOR_RED, COLOR_BLACK);
+	init_pair(CP_CURSOR, COLOR_BLACK, COLOR_CYAN);
 
-	init_pair(CP_REG_PURPLE, COLOR_MAGENTA, COLOR_WHITE);
+	init_pair(CP_REG_PURPLE, COLOR_MAGENTA, -1);
 
 	wbkgd(stdscr, COLOR_PAIR(CP_TOS_STD));
 
-	//default settings
-	wm.settings.show_border = 1;
+	//default colors 
+	wm.configs.show_border = 1;
 }
 
 void wm_cleanup_before_exit(void)
@@ -120,10 +118,14 @@ cosh_win_t *win_create(int h, int w, int flags)
 
 	/* Auto-matic resize based on the terminal size */
 	if (win_get_buffreq() != WIN_DONT_RESIZE) {
-		if (h <= 0 || h > LINES - 1)
-			h = LINES / 2;
-		if (w <= 0 || w > COLS)
-			w = COLS / 2;
+		if (h <= 0 || h > LINES - 1) {
+			h = (LINES * 4) / 10; 
+			if (h < 8 && LINES > 8) h = 8;
+		}
+		if (w <= 0 || w > COLS) {
+			w = (COLS * 8) / 10;
+			if (w < 20 && COLS > 20) w = 20;
+		}
 	}
 
 	win = calloc(1, sizeof(cosh_win_t));
@@ -331,7 +333,7 @@ static void win_render_frame(cosh_win_t *win, int is_focused)
 
 	cchar_t ls, rs, ts, bs, tl, tr, bl, br;
 
-	if (is_focused && wm.settings.show_border) {
+	if (is_focused && wm.configs.show_border) {
 		SET_CHW(ls, L"║");
 		SET_CHW(rs, (win->scroll_max > 0) ? L"▒" : L"║");
 		SET_CHW(ts, L"═");
@@ -340,7 +342,7 @@ static void win_render_frame(cosh_win_t *win, int is_focused)
 		SET_CHW(tr, L"╗");
 		SET_CHW(bl, L"╚");
 		SET_CHW(br, L"╝");
-	} else if (!wm.settings.show_border) {
+	} else if (!wm.configs.show_border) {
 		SET_CHW(ls, L" ");
 		SET_CHW(rs, L" ");
 		SET_CHW(ts, L" ");

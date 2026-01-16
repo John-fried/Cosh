@@ -1,7 +1,7 @@
 # COSH - C-Operating System Shell
 
 CC      := gcc
-CFLAGS  := -Wall -Wextra -pedantic -O3 -march=native -std=gnu99 -IInclude -DLOG_USE_COLOR
+CFLAGS  := -Wall -Wextra -pedantic -O3 -march=native -std=gnu99 -ILibs -IInclude -DLOG_USE_COLOR
 CFLAGS += -Wshadow -Wpointer-arith -Wstrict-prototypes
 LDFLAGS := -lpanelw -lncursesw -lutil -lvterm 
 # Installation Paths
@@ -13,6 +13,7 @@ DESTDIR ?=
 APP_DIR := Apps
 UTIL_DIR := Utils
 KERNEL_DIR := Kernel
+LIBS_DIR := Libs
 BUILD_DIR := Build
 OBJ_DIR := $(BUILD_DIR)/obj
 
@@ -25,11 +26,12 @@ CORE_SRCS := $(wildcard ./*.c)
 APP_SRCS  := $(wildcard $(APP_DIR)/*.c)
 UTIL_SRCS := $(wildcard $(UTIL_DIR)/*.c)
 KERNEL_SRCS := $(wildcard $(KERNEL_DIR)/*.c)
+LIBS_SRCS   := $(shell find $(LIBS_DIR) -name "*.c")
 
 # Combine all sources
-SRCS      := $(KERNEL_SRCS) $(CORE_SRCS) $(UTIL_SRCS) $(APP_SRCS)
+SRCS      := $(LIBS_SRCS) $(KERNEL_SRCS) $(CORE_SRCS) $(UTIL_SRCS) $(APP_SRCS)
 
-# Generate object paths in obj/ directory
+# Generate object paths in object directory
 OBJS      := $(SRCS:%.c=$(OBJ_DIR)/%.o)
 
 # Default rule
@@ -41,7 +43,7 @@ $(TARGETPATH): $(OBJS)
 	@echo "  LD      $@"
 	@$(CC) $(OBJS) -o $@ $(LDFLAGS)
 
-# Compiling (Handles nested directory structure in obj/)
+# Compiling
 $(OBJ_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
 	@echo "  CC      $<"
@@ -64,6 +66,7 @@ uninstall:
 	@rm -f $(DESTDIR)$(BINDIR)/$(TARGETNAME)
 
 size: $(TARGETPATH)
+	@echo "  SIZE..."
 	@size $(TARGETPATH)
 
 .PHONY: all clean install uninstall

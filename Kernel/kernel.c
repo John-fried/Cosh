@@ -1,18 +1,23 @@
 #include "kernel.h"
 
 char WORKDIR[PATH_MAX];
+char CONFIGFILE[PATH_MAX];
 struct workdir_state *wstate = NULL;
+
+static void generate_default_config(void);
 
 int k_boot(void)
 {
 	sprintf(WORKDIR, "%s/%s/%s", get_homedir(), XDG_DATA_DEF, WORKDIR_NAME);
+	sprintf(CONFIGFILE, "%s/%s", WORKDIR, CONFIGFILENAME);
 
 	struct stat sb;
-	setlocale(LC_ALL, "");
+	if (!setlocale(LC_ALL, ""))
+		k_log_warn("Could not set locale from environment.");
 
 	k_log_trace("Ensure workdir...");
 
-	if (lstat(WORKDIR, &sb) == -1) {
+	if (lstat(WORKDIR, &sb) != 0) {
 		k_log_info("Workdir uninitialized: %s", strerror(errno));
 		if (mkdir(WORKDIR, 0755) != 0) {
 			k_log_fatal("Failed to create workdir in %s: %s",
@@ -36,13 +41,20 @@ int k_boot(void)
 		k_log_fatal("Malloc for workdir state failed.");
 		return -1;
 	}
-	k_log_info("Workdir state ready");
+
+	if (lstat(CONFIGFILE, &sb) != 0) {
+		k_log_trace("Creating default config...", CONFIGFILE);
+		generate_default_config();
+	}
 
 	return 0;
 }
 
 void k_start(void)
 {
+	k_log_trace("Loading config...");
+	k_load_config();
+
 	k_log_trace("Initializing interface...");
 	wm_init();		/* Init TUI */
 }
@@ -113,4 +125,51 @@ long k_self_get_rss(void)
 	}
 
 	return rss * pagesize;
+}
+
+static const struct {
+	const char *key;
+	int *target;
+	long def_val;
+} cfg_colors[] = {
+	{"statusbar", &wm.configs.csh_statusbar, 31},
+	{"desktop", &wm.configs.csh_desktop, (long)COLOR_BLACK},
+};
+#define NUM_CFG_COLORS ((int)(sizeof(cfg_colors) / sizeof(cfg_colors[0])))
+
+static void generate_default_config(void)
+{
+	FILE *fp;
+
+	fp = fopen(CONFIGFILE, "a");
+	
+	if (!fp) {
+		k_log_warn("Failed to open config file: %s", strerror(errno));
+		return;
+	}
+
+	fprintf(fp, "; https://github.com/John-fried/Cosh.git\n\n");
+	fprintf(fp, "[colorscheme]\n");
+	for (int i = 0; i < NUM_CFG_COLORS; i++) {
+		fprintf(fp, "%s=%d\n", cfg_colors[i].key, (int) cfg_colors[i].def_val);
+	}
+
+	fclose(fp);
+	k_log_info("Created default config in: %s", CONFIGFILE);
+}
+
+int k_load_config(void)
+{
+	if (access(CONFIGFILE, F_OK) != 0) {
+		k_log_warn("Failed to load config in %s: %s", CONFIGFILE, strerror(errno));
+		return -1;
+	}
+
+	//load colors
+	for (int i = 0; i < NUM_CFG_COLORS; i++) {
+		*(cfg_colors[i].target) = ini_getl("colorscheme", cfg_colors[i].key, cfg_colors[i].def_val, CONFIGFILE);
+	}
+
+	k_log_info("Config loaded.");
+	return 0;
 }

@@ -66,7 +66,7 @@ typedef enum {
 
 #define CP_REG_PURPLE	9
 
-#define CP_WIN_START	20	/* Where the start index for every window color pair */
+#define CP_WIN_START	120	/* Where the start index for every window color pair */
 
 struct cosh_win;
 
@@ -119,7 +119,11 @@ typedef struct cosh_win {
 
 typedef struct {
 	int show_border;//bool
-} cosh_wm_settings_t;
+	
+	//coloscheme
+	int csh_statusbar;
+	int csh_desktop;
+} cosh_wm_config_t;
 
 /* global stat */
 typedef struct {
@@ -128,7 +132,7 @@ typedef struct {
 	int count;
 	int focus_idx;
 
-	cosh_wm_settings_t settings;
+	cosh_wm_config_t configs;
 } cosh_wm_t;
 
 extern cosh_wm_t wm;
