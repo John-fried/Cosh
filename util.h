@@ -8,4 +8,4 @@ int levenshtein_distance(const char *s, const char *t);
 char *get_homedir(void);
 void cleanup_empty_files(const char *dirpath, int *total_deleted);
 
-#endif                          /* UTIL_H */
+#endif				/* UTIL_H */

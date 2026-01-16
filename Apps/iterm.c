@@ -21,29 +21,29 @@
 
 /* Terminal cell representation for history buffer. */
 typedef struct {
-        uint32_t chars[MAX_CELL_CHARS];
-        int fg, bg;
+	uint32_t chars[MAX_CELL_CHARS];
+	int fg, bg;
 	VTermScreenCellAttrs attrs;
 } iterm_cell_t;
 
 typedef struct {
-        iterm_cell_t *cells;
-        int cols;
+	iterm_cell_t *cells;
+	int cols;
 } iterm_line_t;
 
 typedef struct {
-        VTerm *vt;
-        VTermScreen *vts;
-        int fd;
-        pid_t pid;
-        int active;
-        int is_altscreen;
+	VTerm *vt;
+	VTermScreen *vts;
+	int fd;
+	pid_t pid;
+	int active;
+	int is_altscreen;
 
-        iterm_line_t *history;
-        int hist_head;
-        int hist_cnt;
+	iterm_line_t *history;
+	int hist_head;
+	int hist_cnt;
 
-        int pairs[256][256];
+	int pairs[256][256];
 } iterm_t;
 
 static const struct {
@@ -52,7 +52,7 @@ static const struct {
 } altscreen_open_seq[] = {
 	{"\x1b[?1049h", 8},
 	{"\x1b[?1047h", 8},
-	{"\x1b[?47h",   6},
+	{"\x1b[?47h", 6},
 };
 
 static const struct {
@@ -60,124 +60,126 @@ static const struct {
 	size_t len;
 	int id;
 } terminal_control_seq[] = {
-	{"\x1b[H",  3, 0}, /* home */
-	{"\x1b[2J", 4, 1}, /* soft clear */
-	{"\x1b[3J", 4, 2}, /* hard clear */
+	{"\x1b[H", 3, 0},	/* home */
+	{"\x1b[2J", 4, 1},	/* soft clear */
+	{"\x1b[3J", 4, 2},	/* hard clear */
 };
-
 
 /*  Internal Helpers  */
 
 static inline int get_color_idx(VTermColor c)
 {
-        if (c.type != VTERM_COLOR_INDEXED)
-                return -1;
-        return ((unsigned char *)&c)[1];
+	if (c.type != VTERM_COLOR_INDEXED)
+		return -1;
+	return ((unsigned char *)&c)[1];
 }
 
 static int get_pair(iterm_t *self, int vfg, int vbg)
 {
-    (void) self;
-    int fg = (vfg >= 0 && vfg < 256) ? vfg : -1;
-    int bg = (vbg >= 0 && vbg < 256) ? vbg : -1;
+	(void)self;
+	int fg = (vfg >= 0 && vfg < 256) ? vfg : -1;
+	int bg = (vbg >= 0 && vbg < 256) ? vbg : -1;
 
-    if (fg == -1 && bg == -1) return CP_WIN_START;
+	if (fg == -1 && bg == -1)
+		return CP_WIN_START;
 
-    int p_idx = (vfg + 1) * 257 + (vbg + 1); 
-    int p = CP_WIN_START + 100 + (p_idx % 20000);
-    static int initialized[20000] = {0};
-    if (!initialized[p_idx % 20000]) {
-        init_pair(p, fg, bg);
-        initialized[p_idx % 20000] = 1;
-    }
-    return p;
+	int p_idx = (vfg + 1) * 257 + (vbg + 1);
+	int p = CP_WIN_START + 100 + (p_idx % 20000);
+	static int initialized[20000] = { 0 };
+	if (!initialized[p_idx % 20000]) {
+		init_pair(p, fg, bg);
+		initialized[p_idx % 20000] = 1;
+	}
+	return p;
 }
 
 /*  History Management  */
 
 static void free_line(iterm_line_t *line)
 {
-        if (line && line->cells)
-                free(line->cells);
-        if (line) {
-                line->cells = NULL;
-                line->cols = 0;
-        }
+	if (line && line->cells)
+		free(line->cells);
+	if (line) {
+		line->cells = NULL;
+		line->cols = 0;
+	}
 }
 
 static int cb_sb_pushline(int cols, const VTermScreenCell *cells, void *user)
 {
-        cosh_win_t *win = (cosh_win_t *) user;
-        iterm_t *self = (iterm_t *) win->priv;
+	cosh_win_t *win = (cosh_win_t *) user;
+	iterm_t *self = (iterm_t *) win->priv;
 
-        if (!self || !self->history || self->is_altscreen)
-                return 1;
+	if (!self || !self->history || self->is_altscreen)
+		return 1;
 
 	/**
 	 * If hist_head reaches 1023, then (1023 + 1) % 1024 will return 0.
 	 * This forces the index back to the beginning to overwrite the oldest data.
 	 */
-        int idx = (self->hist_head + 1) % HIST_SIZE;
+	int idx = (self->hist_head + 1) % HIST_SIZE;
 
 	//this if the idx = 0 and head at 1024, then: oldest data will be GONE
-        free_line(&self->history[idx]);
-        self->history[idx].cells = malloc(sizeof(iterm_cell_t) * cols);
-        if (!self->history[idx].cells)
-                return 0;
+	free_line(&self->history[idx]);
+	self->history[idx].cells = malloc(sizeof(iterm_cell_t) * cols);
+	if (!self->history[idx].cells)
+		return 0;
 
-        self->history[idx].cols = cols;
+	self->history[idx].cols = cols;
 
-        for (int i = 0; i < cols; i++) {
-                memcpy(self->history[idx].cells[i].chars, cells[i].chars,
-                       sizeof(uint32_t) * MAX_CELL_CHARS);
-                self->history[idx].cells[i].fg = get_color_idx(cells[i].fg);
-                self->history[idx].cells[i].bg = get_color_idx(cells[i].bg);
+	for (int i = 0; i < cols; i++) {
+		memcpy(self->history[idx].cells[i].chars, cells[i].chars,
+		       sizeof(uint32_t) * MAX_CELL_CHARS);
+		self->history[idx].cells[i].fg = get_color_idx(cells[i].fg);
+		self->history[idx].cells[i].bg = get_color_idx(cells[i].bg);
 		self->history[idx].cells[i].attrs = cells[i].attrs;
-        }
+	}
 
-        self->hist_head = idx;
-        if (self->hist_cnt < HIST_SIZE)
-                self->hist_cnt++;
+	self->hist_head = idx;
+	if (self->hist_cnt < HIST_SIZE)
+		self->hist_cnt++;
 
-        win->scroll_max = self->hist_cnt;
+	win->scroll_max = self->hist_cnt;
 
-        if (win->scroll_cur >= win->scroll_max - 1) {
-                win->scroll_cur = win->scroll_max;
-        }
+	if (win->scroll_cur >= win->scroll_max - 1) {
+		win->scroll_cur = win->scroll_max;
+	}
 
-        return 1;
+	return 1;
 }
 
 static int cb_movecursor(VTermPos pos, VTermPos oldpos, int visible, void *user)
 {
-        (void)pos;
-        (void)oldpos;
-        (void)visible;
-        if (user) {
-                cosh_win_t *win = (cosh_win_t *) user;
-                win->dirty = 1;
-        }
-        return 1;
+	(void)pos;
+	(void)oldpos;
+	(void)visible;
+	if (user) {
+		cosh_win_t *win = (cosh_win_t *) user;
+		win->dirty = 1;
+	}
+	return 1;
 }
 
 static int cb_damage(VTermRect rect, void *user)
 {
-        (void)rect;
-        if (user)
-                ((cosh_win_t *) user)->dirty = 1;
-        return 1;
+	(void)rect;
+	if (user)
+		((cosh_win_t *) user)->dirty = 1;
+	return 1;
 }
 
 static int cb_settermprop(VTermProp prop, VTermValue *val, void *user)
 {
-        cosh_win_t *win = (cosh_win_t *) user;
-        iterm_t *self = (iterm_t *) win->priv;
+	cosh_win_t *win = (cosh_win_t *) user;
+	iterm_t *self = (iterm_t *) win->priv;
 
 	if (prop == VTERM_PROP_TITLE) {
 		//handle manual len, val->string didnt know where to end
 		VTermStringFragment frag = val->string;
 		char title_buf[64];
-		size_t safe_len = (frag.len < sizeof(title_buf) - 1) ? frag.len : sizeof(title_buf) - 1;
+		size_t safe_len =
+		    (frag.len <
+		     sizeof(title_buf) - 1) ? frag.len : sizeof(title_buf) - 1;
 
 		memcpy(title_buf, frag.str, safe_len);
 		title_buf[safe_len] = '\0';
@@ -186,39 +188,39 @@ static int cb_settermprop(VTermProp prop, VTermValue *val, void *user)
 	}
 
 	/* just handle closing altscreen only */
-        if (prop == VTERM_PROP_ALTSCREEN && !val->boolean) {
+	if (prop == VTERM_PROP_ALTSCREEN && !val->boolean) {
 		self->is_altscreen = 0;
-                win->scroll_cur = self->hist_cnt;
-                win->scroll_max = self->hist_cnt;
+		win->scroll_cur = self->hist_cnt;
+		win->scroll_max = self->hist_cnt;
 
-                win->dirty = 1;
+		win->dirty = 1;
 		win_needs_redraw = 1;
-        }
-        return 1;
+	}
+	return 1;
 }
 
 static VTermScreenCallbacks screen_cbs = {
-        .damage = cb_damage,
-        .sb_pushline = cb_sb_pushline,
-        .movecursor = cb_movecursor,
-        .settermprop = cb_settermprop,
+	.damage = cb_damage,
+	.sb_pushline = cb_sb_pushline,
+	.movecursor = cb_movecursor,
+	.settermprop = cb_settermprop,
 };
 
 /*  Lifecycle  */
 
 static void iterm_sync_size(cosh_win_t *win)
 {
-        iterm_t *self = (iterm_t *) win->priv;
-        if (!self || self->fd < 0)
-                return;
+	iterm_t *self = (iterm_t *) win->priv;
+	if (!self || self->fd < 0)
+		return;
 
-        struct winsize ws = {.ws_row = (unsigned short)win->vh,.ws_col =
-                    (unsigned short)win->vw
-        };
-        ioctl(self->fd, TIOCSWINSZ, &ws);
-        vterm_set_size(self->vt, win->vh, win->vw);
-        if (self->active)
-                kill(self->pid, SIGWINCH);
+	struct winsize ws = {.ws_row = (unsigned short)win->vh,.ws_col =
+		    (unsigned short)win->vw
+	};
+	ioctl(self->fd, TIOCSWINSZ, &ws);
+	vterm_set_size(self->vt, win->vh, win->vw);
+	if (self->active)
+		kill(self->pid, SIGWINCH);
 }
 
 static void iterm_spawn(iterm_t *self, cosh_win_t *win)
@@ -226,38 +228,38 @@ static void iterm_spawn(iterm_t *self, cosh_win_t *win)
 	int r = win->vh;
 	int c = win->vw;
 
-        struct winsize ws = {.ws_row = (unsigned short)r,.ws_col =
-                    (unsigned short)c
-        };
-        self->pid = forkpty(&self->fd, NULL, NULL, &ws);
+	struct winsize ws = {.ws_row = (unsigned short)r,.ws_col =
+		    (unsigned short)c
+	};
+	self->pid = forkpty(&self->fd, NULL, NULL, &ws);
 
-        if (self->pid == 0) {
-                setenv("TERM", "xterm-256color", 1);
-                setenv("LANG", "en_US.UTF-8", 1);
+	if (self->pid == 0) {
+		setenv("TERM", "xterm-256color", 1);
+		setenv("LANG", "en_US.UTF-8", 1);
 		char *SHELL = getenv("SHELL");
 
 		if (!SHELL)
 			SHELL = "/bin/bash";
 
-                execl(SHELL, SHELL, NULL);
-                _exit(1);
-        }
+		execl(SHELL, SHELL, NULL);
+		_exit(1);
+	}
 
-        self->active = 1;
-        fcntl(self->fd, F_SETFL, O_NONBLOCK);
+	self->active = 1;
+	fcntl(self->fd, F_SETFL, O_NONBLOCK);
 }
 
 /*  App Callbacks  */
 
 void app_iterm_tick(cosh_win_t *win)
 {
-        iterm_t *self = (iterm_t *) win->priv;
-        char buf[READ_BUF_SIZE];
+	iterm_t *self = (iterm_t *) win->priv;
+	char buf[READ_BUF_SIZE];
 
-        if (!self || !self->active || self->fd < 0)
-                return;
+	if (!self || !self->active || self->fd < 0)
+		return;
 
-        ssize_t n = read(self->fd, buf, sizeof(buf));
+	ssize_t n = read(self->fd, buf, sizeof(buf));
 
 	//close window on exit
 	if (n == 0 || (n < 0 && errno == EIO)) {
@@ -265,42 +267,51 @@ void app_iterm_tick(cosh_win_t *win)
 		return;
 	}
 
-        if (n > 0) {
+	if (n > 0) {
 		size_t j = 0;
 
-		size_t terminal_seq_count = sizeof(terminal_control_seq) / sizeof(terminal_control_seq[0]);
+		size_t terminal_seq_count =
+		    sizeof(terminal_control_seq) /
+		    sizeof(terminal_control_seq[0]);
 		for (j = 0; j < terminal_seq_count; j++) {
-			if (memmem(buf, n, terminal_control_seq[j].seq, terminal_control_seq[j].len)) {
+			if (memmem
+			    (buf, n, terminal_control_seq[j].seq,
+			     terminal_control_seq[j].len)) {
 				switch (terminal_control_seq[j].id) {
-					case 0: /* home */
-						win->dirty = 1;
-						break;
+				case 0:	/* home */
+					win->dirty = 1;
+					break;
 
-					case 1: /* soft clear */
-						werase(win->ptr);
-						win->dirty = 1;
-						break;
+				case 1:	/* soft clear */
+					werase(win->ptr);
+					win->dirty = 1;
+					break;
 
-					case 2:
-						self->hist_cnt = 0;
-						self->hist_head = 0;
-						if (self->history) {
-							for (int i = 0; i < HIST_SIZE; i++)
-								free_line(&self->history[i]);
-						}
+				case 2:
+					self->hist_cnt = 0;
+					self->hist_head = 0;
+					if (self->history) {
+						for (int i = 0; i < HIST_SIZE;
+						     i++)
+							free_line(&self->
+								  history[i]);
+					}
 
-						win->scroll_cur = 0;
-						win->scroll_max = 0;
-						win->dirty = 1;
-						break;
+					win->scroll_cur = 0;
+					win->scroll_max = 0;
+					win->dirty = 1;
+					break;
 				}
 			}
 		}
 
 		/* This is fucking shit best */
-		size_t altscreen_open_count = sizeof(altscreen_open_seq) / sizeof(altscreen_open_seq[0]);
+		size_t altscreen_open_count =
+		    sizeof(altscreen_open_seq) / sizeof(altscreen_open_seq[0]);
 		for (j = 0; j < altscreen_open_count; j++) {
-			if (memmem(buf, n, altscreen_open_seq[j].seq, altscreen_open_seq[j].len)) {
+			if (memmem
+			    (buf, n, altscreen_open_seq[j].seq,
+			     altscreen_open_seq[j].len)) {
 				if (!self->is_altscreen) {
 					self->is_altscreen = 1;
 					win->scroll_cur = 0;
@@ -313,118 +324,176 @@ void app_iterm_tick(cosh_win_t *win)
 			}
 		}
 
-                vterm_input_write(self->vt, buf, (size_t)n);
+		vterm_input_write(self->vt, buf, (size_t)n);
 		win->dirty = 1;
 		win_needs_redraw = 1;
 	} else if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK)
-                self->active = 0;
+		self->active = 0;
 }
 
-void app_iterm_input(cosh_win_t *win, int ch)
+void app_iterm_input(cosh_win_t *win, int ch, MEVENT *ev)
 {
-        iterm_t *self = (iterm_t *) win->priv;
-        if (!self || !self->active)
-                return;
+	iterm_t *self = (iterm_t *) win->priv;
 
-        if (self->is_altscreen) {
-                if (ch == WIN_MOUSE_SCROLL_UP) {
-                        vterm_keyboard_key(self->vt, VTERM_KEY_UP,
-                                           VTERM_MOD_NONE);
-                        goto send_output;
-                } else if (ch == WIN_MOUSE_SCROLL_DOWN) {
-                        vterm_keyboard_key(self->vt, VTERM_KEY_DOWN,
-                                           VTERM_MOD_NONE);
-                        goto send_output;
-                }
-        } else {
-                if (ch == WIN_MOUSE_SCROLL_UP) {
-                        if (win->scroll_cur > 0)
-                                win->scroll_cur =
-                                    (win->scroll_cur >
-                                     2) ? win->scroll_cur - 2 : 0;
-                        win->dirty = 1;
-                        return;
-                } else if (ch == WIN_MOUSE_SCROLL_DOWN) {
-                        if (win->scroll_cur < win->scroll_max)
-                                win->scroll_cur =
-                                    (win->scroll_cur + 2 >
-                                     win->scroll_max) ? win->scroll_max : win->
-                                    scroll_cur + 2;
-                        win->dirty = 1;
-                        return;
-                }
-        }
+	if (!self || !self->active)
+		return;
 
-        win->scroll_cur = win->scroll_max;
+	if (ch == KEY_MOUSE && ev != NULL) {
+		int vterm_row = ev->y - win->y - 1;
+		int vterm_cols = ev->x - win->x - 2;
+
+		if (vterm_row >= 0 && vterm_row < win->vh &&
+		    vterm_cols >= 0 && vterm_cols < win->vw) {
+
+			VTermModifier mod = VTERM_MOD_NONE;
+			if (ev->bstate & BUTTON_SHIFT)
+				mod |= VTERM_MOD_SHIFT;
+			if (ev->bstate & BUTTON_CTRL)
+				mod |= VTERM_MOD_CTRL;
+
+			vterm_mouse_move(self->vt, vterm_row, vterm_cols, mod);
+
+			if (ev->bstate & (BUTTON1_CLICKED | BUTTON1_PRESSED)) {
+				vterm_mouse_button(self->vt, 1, 1, mod);
+
+				if (ev->bstate & BUTTON1_CLICKED) {
+					vterm_mouse_button(self->vt, 1, 0, mod);
+				}
+			} else if (ev->bstate & BUTTON1_RELEASED)
+				vterm_mouse_button(self->vt, 1, 0, mod);
+
+			goto send_output;
+		}
+	}
+
+	if (self->is_altscreen) {
+		if (ch == WIN_MOUSE_SCROLL_UP) {
+			vterm_keyboard_key(self->vt, VTERM_KEY_UP,
+					   VTERM_MOD_NONE);
+			goto send_output;
+		} else if (ch == WIN_MOUSE_SCROLL_DOWN) {
+			vterm_keyboard_key(self->vt, VTERM_KEY_DOWN,
+					   VTERM_MOD_NONE);
+			goto send_output;
+		}
+	} else {
+		if (ch == WIN_MOUSE_SCROLL_UP) {
+			if (win->scroll_cur > 0)
+				win->scroll_cur =
+				    (win->scroll_cur >
+				     2) ? win->scroll_cur - 2 : 0;
+			win->dirty = 1;
+			return;
+		} else if (ch == WIN_MOUSE_SCROLL_DOWN) {
+			if (win->scroll_cur < win->scroll_max)
+				win->scroll_cur =
+				    (win->scroll_cur + 2 >
+				     win->scroll_max) ? win->
+				    scroll_max : win->scroll_cur + 2;
+			win->dirty = 1;
+			return;
+		}
+	}
+
+	win->scroll_cur = win->scroll_max;
 
 	if (ch >= KEY_MIN && ch <= KEY_MAX) {
 		VTermKey k = VTERM_KEY_NONE;
 		switch (ch) {
-		    case KEY_UP:        k = VTERM_KEY_UP; break;
-		    case KEY_DOWN:      k = VTERM_KEY_DOWN; break;
-		    case KEY_LEFT:      k = VTERM_KEY_LEFT; break;
-		    case KEY_RIGHT:     k = VTERM_KEY_RIGHT; break;
-		    case KEY_BACKSPACE: k = VTERM_KEY_BACKSPACE; break;
-		    case KEY_DC:        k = VTERM_KEY_DEL; break;
-		    case KEY_IC:        k = VTERM_KEY_INS; break;
-		    case KEY_HOME:      k = VTERM_KEY_HOME; break;
-		    case KEY_END:       k = VTERM_KEY_END; break;
-		    case KEY_PPAGE:     k = VTERM_KEY_PAGEUP; break;
-		    case KEY_NPAGE:     k = VTERM_KEY_PAGEDOWN; break;
-		    case KEY_ENTER:
-		    case 10:            k = VTERM_KEY_ENTER; break;
+		case KEY_UP:
+			k = VTERM_KEY_UP;
+			break;
+		case KEY_DOWN:
+			k = VTERM_KEY_DOWN;
+			break;
+		case KEY_LEFT:
+			k = VTERM_KEY_LEFT;
+			break;
+		case KEY_RIGHT:
+			k = VTERM_KEY_RIGHT;
+			break;
+		case KEY_BACKSPACE:
+			k = VTERM_KEY_BACKSPACE;
+			break;
+		case KEY_DC:
+			k = VTERM_KEY_DEL;
+			break;
+		case KEY_IC:
+			k = VTERM_KEY_INS;
+			break;
+		case KEY_HOME:
+			k = VTERM_KEY_HOME;
+			break;
+		case KEY_END:
+			k = VTERM_KEY_END;
+			break;
+		case KEY_PPAGE:
+			k = VTERM_KEY_PAGEUP;
+			break;
+		case KEY_NPAGE:
+			k = VTERM_KEY_PAGEDOWN;
+			break;
+		case KEY_ENTER:
+		case 10:
+			k = VTERM_KEY_ENTER;
+			break;
 		}
 		if (k != VTERM_KEY_NONE)
-		    vterm_keyboard_key(self->vt, k, VTERM_MOD_NONE);
+			vterm_keyboard_key(self->vt, k, VTERM_MOD_NONE);
 	} else {
 		vterm_keyboard_unichar(self->vt, (uint32_t) ch, VTERM_MOD_NONE);
 	}
 
-send_output:{
+ send_output:{
 		char out[128];
 		size_t len = vterm_output_read(self->vt, out, sizeof(out));
-                if (len > 0)
-                        (void)write(self->fd, out, len);
-        }
+		if (len > 0)
+			(void)write(self->fd, out, len);
+	}
 }
 
-static void draw_cell(WINDOW *w, int y, int x, uint32_t *chars, int pair, VTermScreenCell attrs)
+static void draw_cell(WINDOW *w, int y, int x, uint32_t *chars, int pair,
+		      VTermScreenCell attrs)
 {
-    cchar_t wc;
-    wchar_t wstr[MAX_CELL_CHARS + 1];
-    attr_t n_attrs = A_NORMAL;
+	cchar_t wc;
+	wchar_t wstr[MAX_CELL_CHARS + 1];
+	attr_t n_attrs = A_NORMAL;
 
-    // Attrmap
-    if (attrs.attrs.bold)      n_attrs |= A_BOLD;
-    if (attrs.attrs.underline) n_attrs |= A_UNDERLINE;
-    if (attrs.attrs.reverse)   n_attrs |= A_REVERSE;
-    if (attrs.attrs.blink)     n_attrs |= A_BLINK;
+	// Attrmap
+	if (attrs.attrs.bold)
+		n_attrs |= A_BOLD;
+	if (attrs.attrs.underline)
+		n_attrs |= A_UNDERLINE;
+	if (attrs.attrs.reverse)
+		n_attrs |= A_REVERSE;
+	if (attrs.attrs.blink)
+		n_attrs |= A_BLINK;
 
-    if (chars[0] == 0) {
-        wstr[0] = L' ';
-        wstr[1] = L'\0';
-    } else {
-        int i;
-        for (i = 0; i < MAX_CELL_CHARS && chars[i]; i++)
-            wstr[i] = (wchar_t)chars[i];
-        wstr[i] = L'\0';
-    }
+	if (chars[0] == 0) {
+		wstr[0] = L' ';
+		wstr[1] = L'\0';
+	} else {
+		int i;
+		for (i = 0; i < MAX_CELL_CHARS && chars[i]; i++)
+			wstr[i] = (wchar_t)chars[i];
+		wstr[i] = L'\0';
+	}
 
-    if (setcchar(&wc, wstr, n_attrs, (short)pair, NULL) == OK)
-        mvwadd_wch(w, y, x, &wc);
+	if (setcchar(&wc, wstr, n_attrs, (short)pair, NULL) == OK)
+		mvwadd_wch(w, y, x, &wc);
 }
 
 void app_iterm_render(cosh_win_t *win)
 {
-        iterm_t *self = (iterm_t *) win->priv;
-        if (!self || !win->ptr)
-                return;
+	iterm_t *self = (iterm_t *) win->priv;
+	if (!self || !win->ptr)
+		return;
 
-        int rows = win->vh;
-        int cols = win->vw;
+	int rows = win->vh;
+	int cols = win->vw;
 
 	VTermPos cur;
-        vterm_state_get_cursorpos(vterm_obtain_state(self->vt), &cur);
+	vterm_state_get_cursorpos(vterm_obtain_state(self->vt), &cur);
 
 	if (self->is_altscreen) {
 		win->scroll_max = 0;
@@ -432,29 +501,37 @@ void app_iterm_render(cosh_win_t *win)
 
 		for (int r = 0; r < rows; r++) {
 			for (int c = 0; c < cols; c++) {
-				VTermPos pos = {.row = r, .col = c};
+				VTermPos pos = {.row = r,.col = c };
 				VTermScreenCell cell;
 
-				if (vterm_screen_get_cell(self->vts, pos, &cell)) {
-					int p = (r == cur.row && c == cur.col) ?
-						CP_CURSOR : get_pair(self, get_color_idx(cell.fg), get_color_idx(cell.bg));
+				if (vterm_screen_get_cell
+				    (self->vts, pos, &cell)) {
+					int p = (r == cur.row
+						 && c ==
+						 cur.
+						 col) ? CP_CURSOR :
+					    get_pair(self,
+						     get_color_idx(cell.fg),
+						     get_color_idx(cell.bg));
 
 					win_attron(win, p);
-					draw_cell(win->ptr, r + 1, c + 2, cell.chars, p, cell);
+					draw_cell(win->ptr, r + 1, c + 2,
+						  cell.chars, p, cell);
 					win_attroff(win, p);
 				}
 			}
 		}
 
-		return; /* early return */
+		return;		/* early return */
 	}
 
 	win->scroll_max = self->hist_cnt;
-        int scroll_offset = self->is_altscreen ? 0 : (self->hist_cnt - win->scroll_cur);
+	int scroll_offset =
+	    self->is_altscreen ? 0 : (self->hist_cnt - win->scroll_cur);
 	if (scroll_offset < 0)
-                scroll_offset = 0;
+		scroll_offset = 0;
 
-        for (int r = 0; r < rows; r++) {
+	for (int r = 0; r < rows; r++) {
 		if (!self->is_altscreen && r < scroll_offset) {
 			/* Render from History */
 			int hidx =
@@ -463,17 +540,23 @@ void app_iterm_render(cosh_win_t *win)
 			iterm_line_t *l = &self->history[hidx];
 
 			if (l && l->cells) {
-			    for (int c = 0; c < cols && c < l->cols; c++) {
-				int p = get_pair(self, l->cells[c].fg, l->cells[c].bg);
-				
-				VTermScreenCell tmp_cell = {0};
-				memcpy(tmp_cell.chars, l->cells[c].chars, sizeof(tmp_cell.chars));
-				tmp_cell.attrs = l->cells[c].attrs;
+				for (int c = 0; c < cols && c < l->cols; c++) {
+					int p =
+					    get_pair(self, l->cells[c].fg,
+						     l->cells[c].bg);
 
-				win_attron(win, p);
-				draw_cell(win->ptr, r + 1, c + 2, l->cells[c].chars, p, tmp_cell);
-				win_attroff(win, p);
-			    }
+					VTermScreenCell tmp_cell = { 0 };
+					memcpy(tmp_cell.chars,
+					       l->cells[c].chars,
+					       sizeof(tmp_cell.chars));
+					tmp_cell.attrs = l->cells[c].attrs;
+
+					win_attron(win, p);
+					draw_cell(win->ptr, r + 1, c + 2,
+						  l->cells[c].chars, p,
+						  tmp_cell);
+					win_attroff(win, p);
+				}
 			}
 			continue;
 		}
@@ -481,7 +564,8 @@ void app_iterm_render(cosh_win_t *win)
 		/* Render Active Screen */
 		VTermPos pos = {.row =
 			    self->is_altscreen ? r : (r - scroll_offset),.col =
-			    0 };
+			    0
+		};
 		for (pos.col = 0; pos.col < cols; pos.col++) {
 			VTermScreenCell cell;
 			if (vterm_screen_get_cell(self->vts, pos, &cell)) {
@@ -506,63 +590,63 @@ void app_iterm_render(cosh_win_t *win)
 
 void iterm_cleanup(void *p)
 {
-        iterm_t *self = (iterm_t *) p;
-        if (!self)
-                return;
+	iterm_t *self = (iterm_t *) p;
+	if (!self)
+		return;
 
-        if (self->active && self->pid > 0) {
-                kill(self->pid, SIGHUP);
-                usleep(1000);
-                kill(self->pid, SIGKILL);
-                waitpid(self->pid, NULL, WNOHANG);
-        }
+	if (self->active && self->pid > 0) {
+		kill(self->pid, SIGHUP);
+		usleep(1000);
+		kill(self->pid, SIGKILL);
+		waitpid(self->pid, NULL, WNOHANG);
+	}
 
-        if (self->history) {
-                for (int i = 0; i < HIST_SIZE; i++)
-                        free_line(&self->history[i]);
-                free(self->history);
-        }
+	if (self->history) {
+		for (int i = 0; i < HIST_SIZE; i++)
+			free_line(&self->history[i]);
+		free(self->history);
+	}
 
-        if (self->vt)
-                vterm_free(self->vt);
+	if (self->vt)
+		vterm_free(self->vt);
 
-        if (self->fd >= 0)
-                close(self->fd);
+	if (self->fd >= 0)
+		close(self->fd);
 
-        free(self);
+	free(self);
 }
 
 void win_spawn_iterm(void)
 {
-        cosh_win_t *win = win_create(35, 120, WIN_FLAG_NONE);
-        if (!win)
-                return;
+	cosh_win_t *win = win_create(35, 120, WIN_FLAG_NONE);
+	if (!win)
+		return;
 
-        iterm_t *self = calloc(1, sizeof(iterm_t));
-        if (!self)
-                return;
+	iterm_t *self = calloc(1, sizeof(iterm_t));
+	if (!self)
+		return;
 
-        self->vt = vterm_new(win->vh, win->vw);
-        vterm_set_utf8(self->vt, 1);
-        self->vts = vterm_obtain_screen(self->vt);
-        self->history = calloc(HIST_SIZE, sizeof(iterm_line_t));
-        self->fd = -1;
+	self->vt = vterm_new(win->vh, win->vw);
+	vterm_set_utf8(self->vt, 1);
+	self->vts = vterm_obtain_screen(self->vt);
+	self->history = calloc(HIST_SIZE, sizeof(iterm_line_t));
+	self->fd = -1;
 
-        vterm_screen_set_callbacks(self->vts, &screen_cbs, win);
-        vterm_screen_reset(self->vts, 1);
+	vterm_screen_set_callbacks(self->vts, &screen_cbs, win);
+	vterm_screen_reset(self->vts, 1);
 
-        iterm_spawn(self, win);
-	win->poll_fd = self->fd; 
+	iterm_spawn(self, win);
+	win->poll_fd = self->fd;
 
-        win_setopt(win, WIN_OPT_PRIV, self);
-        win_setopt(win, WIN_OPT_APPNAME, "Terminal");
-        win_setopt(win, WIN_OPT_TITLE, "Terminal");
-        win_setopt(win, WIN_OPT_RENDER, app_iterm_render);
-        win_setopt(win, WIN_OPT_INPUT, app_iterm_input);
-        win_setopt(win, WIN_OPT_FG, COLOR_WHITE);
-        win_setopt(win, WIN_OPT_BG, COLOR_BLACK);
-        win_setopt(win, WIN_OPT_TICK, app_iterm_tick);
-        win_setopt(win, WIN_OPT_DESTROY, iterm_cleanup);
-        win_setopt(win, WIN_OPT_RESIZE, iterm_sync_size);
-        win_setopt(win, WIN_OPT_CURSOR, 0);
+	win_setopt(win, WIN_OPT_PRIV, self);
+	win_setopt(win, WIN_OPT_APPNAME, "Terminal");
+	win_setopt(win, WIN_OPT_TITLE, "Terminal");
+	win_setopt(win, WIN_OPT_RENDER, app_iterm_render);
+	win_setopt(win, WIN_OPT_INPUT, app_iterm_input);
+	win_setopt(win, WIN_OPT_FG, COLOR_WHITE);
+	win_setopt(win, WIN_OPT_BG, COLOR_BLACK);
+	win_setopt(win, WIN_OPT_TICK, app_iterm_tick);
+	win_setopt(win, WIN_OPT_DESTROY, iterm_cleanup);
+	win_setopt(win, WIN_OPT_RESIZE, iterm_sync_size);
+	win_setopt(win, WIN_OPT_CURSOR, 0);
 }

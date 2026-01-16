@@ -75,7 +75,7 @@ static void dispatch_input(int ch)
 		switch (next) {
 			/* Window Management */
 
-		// cycle
+			// cycle
 		case CTRL('n'):
 		case '\t':
 			win_raise(0);
@@ -137,7 +137,7 @@ static void dispatch_input(int ch)
 		break;
 	default:
 		if (f && f->input_cb) {
-			f->input_cb(f, ch);
+			f->input_cb(f, ch, NULL);
 			f->dirty = 1;
 		} else if (!f) {
 			win_vibrate();
@@ -195,11 +195,11 @@ int main(void)
 
 		struct timeval tv;
 		gettimeofday(&tv, NULL);
-		int timeout_ms = 1000 - (tv.tv_usec / 1000); 
+		int timeout_ms = 1000 - (tv.tv_usec / 1000);
 
 		int ret = poll(pfds, nfds, timeout_ms);
 
-		if (ret >= 0) {
+		if (ret > 0) {
 			//Keyboard (pfds[0])
 			if (pfds[0].revents & POLLIN) {
 				while ((ch = getch()) != ERR) {
@@ -215,9 +215,13 @@ int main(void)
 			int current_pfd = 1;
 			for (int i = 0; i < wm.count; i++) {
 				if (wm.stack[i]->poll_fd >= 0) {
-					if (pfds[current_pfd].revents & (POLLIN | POLLHUP | POLLERR)) {
+					if (pfds[current_pfd].
+					    revents & (POLLIN | POLLHUP |
+						       POLLERR)) {
 						if (wm.stack[i]->tick_cb)
-							wm.stack[i]->tick_cb(wm.stack[i]);
+							wm.stack[i]->tick_cb(wm.
+									     stack
+									     [i]);
 					}
 					current_pfd++;
 				}
