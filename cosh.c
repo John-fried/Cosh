@@ -196,11 +196,8 @@ int main(void)
 			}
 		}
 
-		struct timeval tv;
-		gettimeofday(&tv, NULL);
-		int timeout_ms = 1000 - (tv.tv_usec / 1000);
-
-		int ret = poll(pfds, nfds, timeout_ms);
+		//check for ms
+		int ret = poll(pfds, nfds, wm.configs.refresh_rate);
 
 		if (ret > 0) {
 			//Keyboard (pfds[0])
@@ -233,8 +230,7 @@ int main(void)
 			win_needs_redraw = 1;
 		}
 
-		if (win_needs_redraw)
-			win_refresh_all();
+		if (win_needs_redraw) win_refresh_all();
 	}
 
 	return 0;

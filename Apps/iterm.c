@@ -283,7 +283,6 @@ void app_iterm_tick(cosh_win_t *win)
 					break;
 
 				case 1:	/* soft clear */
-					werase(win->ptr);
 					win->dirty = 1;
 					break;
 
@@ -316,7 +315,6 @@ void app_iterm_tick(cosh_win_t *win)
 					self->is_altscreen = 1;
 					win->scroll_cur = 0;
 					win->scroll_max = 0;
-					werase(win->ptr);
 					win->dirty = 1;
 					win_needs_redraw = 1;
 					break;

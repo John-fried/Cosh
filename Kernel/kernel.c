@@ -127,49 +127,100 @@ long k_self_get_rss(void)
 	return rss * pagesize;
 }
 
-static const struct {
-	const char *key;
-	int *target;
-	long def_val;
-} cfg_colors[] = {
-	{"statusbar", &wm.configs.csh_statusbar, 31},
-	{"desktop", &wm.configs.csh_desktop, (long)COLOR_BLACK},
+/* Config Management */
+
+const config_item desktop_items[] = {
+	{"refresh_rate", "Refresh rate in milliseconds for checking file-descriptor to respond before drawing again", &wm.configs.refresh_rate, "800", TYPE_INT}
 };
-#define NUM_CFG_COLORS ((int)(sizeof(cfg_colors) / sizeof(cfg_colors[0])))
+
+const config_item color_items[] = {
+	{"desktop", "Your cosh desktop background colors", &wm.configs.csh_desktop, "0", TYPE_INT},
+	{"statusbar", "", &wm.configs.csh_statusbar, "31", TYPE_INT}
+};
+
+const config_section app_config[] = {
+	{
+		"desktop",
+		"Adjust your cosh desktop environment",
+		desktop_items,
+		sizeof(desktop_items) / sizeof(desktop_items[0])
+	},
+	{
+		"colorscheme",
+		"Adjust your cosh colorscheme/theme. Based on the ncurses color id.",
+		color_items,
+		sizeof(color_items) / sizeof(color_items[0])
+	}
+};
+
+#define NUM_SECTIONS ((int)(sizeof(app_config) / sizeof(app_config[0])))
+
+
 
 static void generate_default_config(void)
 {
 	FILE *fp;
-
-	fp = fopen(CONFIGFILE, "a");
+	fp = fopen(CONFIGFILE, "w");
 	
 	if (!fp) {
-		k_log_warn("Failed to open config file: %s", strerror(errno));
+		k_log_warn("Failed to open/create config file: %s", strerror(errno));
 		return;
 	}
 
-	fprintf(fp, "; https://github.com/John-fried/Cosh.git\n\n");
-	fprintf(fp, "[colorscheme]\n");
-	for (int i = 0; i < NUM_CFG_COLORS; i++) {
-		fprintf(fp, "%s=%d\n", cfg_colors[i].key, (int) cfg_colors[i].def_val);
+	fprintf(fp, "; Check updates on: https://github.com/John-fried/Cosh.git\n\n");
+	for (int i = 0; i < NUM_SECTIONS; i++) {
+		const config_section *sec = &app_config[i];
+		fprintf(fp, "[%s]\n", sec->name);
+
+		//section desc
+		if (strlen(sec->desc) > 0)
+			fprintf(fp, "; %s\n", sec->desc);
+
+		for (int j = 0; j < sec->item_count; j++) {
+			const config_item *it = &sec->items[j];
+			fprintf(fp, "%s=%s", it->key, it->def_val);
+
+			if (strlen(it->desc) > 0)
+				fprintf(fp, "\t; %s", it->desc);
+
+			fprintf(fp, "\n");
+		}
+
+		fprintf(fp, "\n");
 	}
 
 	fclose(fp);
 	k_log_info("Created default config in: %s", CONFIGFILE);
 }
 
-int k_load_config(void)
-{
-	if (access(CONFIGFILE, F_OK) != 0) {
-		k_log_warn("Failed to load config in %s: %s", CONFIGFILE, strerror(errno));
-		return -1;
-	}
+int k_load_config(void) {
+    if (access(CONFIGFILE, F_OK) != 0) {
+        k_log_warn("Config file not found: %s", CONFIGFILE);
+        return -1;
+    }
 
-	//load colors
-	for (int i = 0; i < NUM_CFG_COLORS; i++) {
-		*(cfg_colors[i].target) = ini_getl("colorscheme", cfg_colors[i].key, cfg_colors[i].def_val, CONFIGFILE);
-	}
+    for (int i = 0; i < NUM_SECTIONS; i++) {
+        const config_section *sec = &app_config[i];
 
-	k_log_info("Config loaded.");
-	return 0;
+        for (int j = 0; j < sec->item_count; j++) {
+            const config_item *it = &sec->items[j];
+
+            switch (it->type) {
+                case TYPE_INT:
+                    *(int *)it->target = (int)ini_getl(sec->name, it->key, atol(it->def_val), CONFIGFILE);
+                    break;
+
+                case TYPE_STR:
+                    ini_gets(sec->name, it->key, it->def_val, (char *)it->target, 64, CONFIGFILE);
+                    break;
+
+                case TYPE_BOOL:
+                    *(bool *)it->target = ini_getbool(sec->name, it->key, (int)atol(it->def_val), CONFIGFILE);
+                    break;
+            }
+        }
+    }
+
+    k_log_info("Config loaded..");
+    return 0;
 }

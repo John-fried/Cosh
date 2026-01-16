@@ -750,7 +750,6 @@ void win_refresh_all(void)
 		win_force_full = 0;
 	}
 
-	draw_desktop();
 	draw_statusbar();
 	wnoutrefresh(stdscr);
 	curs_set(0);
@@ -759,6 +758,7 @@ void win_refresh_all(void)
 		cosh_win_t *w = wm.stack[i];
 
 		if (w->dirty) {
+			draw_desktop();
 			werase(w->ptr);
 			if (w->render_cb)
 				w->render_cb(w);

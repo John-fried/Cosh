@@ -120,7 +120,10 @@ typedef struct cosh_win {
 typedef struct {
 	int show_border;//bool
 	
-	//coloscheme
+	//desktop environ
+	int refresh_rate;
+
+	//colorscheme
 	int csh_statusbar;
 	int csh_desktop;
 } cosh_wm_config_t;
