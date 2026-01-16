@@ -10,9 +10,10 @@ static const struct {
 	{"ALT + W / N", "Increase/Decrease window size"},
 	{"ALT + H,J,K,L", "Move window"},
 	{"ALT + P", "Open Apps pallete"},
-	{"ALT + TAB / ^N", "Cycle focus to next window"},
-	{"ALT + ^P", "Cycle focus to previous window"},
-	{"ALT + ^A", "Unfocus all window"},
+	{"ALT + TAB / c-N", "Cycle focus to next window"},
+	{"ALT + c-P", "Cycle focus to previous window"},
+	{"ALT + c-A", "Unfocus all window"},
+	{"ALT + c-B", "Toggle window border"},
 	{"CTRL + /", "Shutdown the system"}
 };
 

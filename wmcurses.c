@@ -16,7 +16,11 @@
 #define BUTTON7_PRESSED  001000000000L
 #endif
 
-cosh_wm_t wm = {.count = 0,.focus_idx = -1 };
+//initialize first global wm (window manager) state
+cosh_wm_t wm = {
+	.count = 0,
+	.focus_idx = -1,
+};
 
 win_buffreq_t win_buffer_request;
 int win_needs_redraw = 1;
@@ -92,6 +96,9 @@ void wm_init(void)
 	init_pair(CP_REG_PURPLE, COLOR_MAGENTA, COLOR_WHITE);
 
 	wbkgd(stdscr, COLOR_PAIR(CP_TOS_STD));
+
+	//default settings
+	wm.settings.show_border = 1;
 }
 
 void wm_cleanup_before_exit(void)
@@ -324,7 +331,7 @@ static void win_render_frame(cosh_win_t *win, int is_focused)
 
 	cchar_t ls, rs, ts, bs, tl, tr, bl, br;
 
-	if (is_focused) {
+	if (is_focused && wm.settings.show_border) {
 		SET_CHW(ls, L"║");
 		SET_CHW(rs, (win->scroll_max > 0) ? L"▒" : L"║");
 		SET_CHW(ts, L"═");
@@ -333,6 +340,15 @@ static void win_render_frame(cosh_win_t *win, int is_focused)
 		SET_CHW(tr, L"╗");
 		SET_CHW(bl, L"╚");
 		SET_CHW(br, L"╝");
+	} else if (!wm.settings.show_border) {
+		SET_CHW(ls, L" ");
+		SET_CHW(rs, L" ");
+		SET_CHW(ts, L" ");
+		SET_CHW(bs, L" ");
+		SET_CHW(tl, L" ");
+		SET_CHW(tr, L" ");
+		SET_CHW(bl, L" ");
+		SET_CHW(br, L" ");
 	} else {
 		SET_CHW(ls, L"│");
 		SET_CHW(rs, (win->scroll_max > 0) ? L"▒" : L"│");
@@ -346,12 +362,12 @@ static void win_render_frame(cosh_win_t *win, int is_focused)
 
 	wattron(win->ptr, COLOR_PAIR(win->color_pair));
 	wborder_set(win->ptr, &ls, &rs, &ts, &bs, &tl, &tr, &bl, &br);
-	wattron(win->ptr, COLOR_PAIR(hdr_color));
 
+	wattron(win->ptr, COLOR_PAIR(hdr_color));
 	for (int i = 1; i < win->w - 1; i++)
 		mvwaddch(win->ptr, 0, i, ' ');
 
-	//render title
+	//render title, truncation
 	//5 for [ X ]
 	char title_buf[win->vw - 5];
 	memcpy(title_buf, win->title, sizeof(title_buf) - 1);

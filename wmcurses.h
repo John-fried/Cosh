@@ -118,10 +118,17 @@ typedef struct cosh_win {
 } cosh_win_t;
 
 typedef struct {
+	int show_border;//bool
+} cosh_wm_settings_t;
+
+/* global stat */
+typedef struct {
 	cosh_win_t *stack[WIN_MAX];
 	cosh_win_t *drag_win;	/* Pointer to a window that dragged */
 	int count;
 	int focus_idx;
+
+	cosh_wm_settings_t settings;
 } cosh_wm_t;
 
 extern cosh_wm_t wm;

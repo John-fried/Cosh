@@ -128,6 +128,9 @@ static void dispatch_input(int ch)
 				wm.stack[i]->dirty = 1;
 			win_needs_redraw = 1;
 			return;
+		case CTRL('b'):
+			wm.settings.show_border = !wm.settings.show_border;
+			break;
 		}
 	}
 
