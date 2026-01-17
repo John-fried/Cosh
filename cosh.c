@@ -12,7 +12,7 @@ void register_app(const char *name, void (*spawn)(void))
 	app_entry_t *new_app = malloc(sizeof(app_entry_t));
 
 	if (!new_app) {
-		k_log_error("Failed to load software '%s': %s", name,
+		c_log_error("Failed to load software '%s': %s", name,
 			    strerror(errno));
 		return;
 	}
@@ -160,16 +160,15 @@ static void dispatch_input(int ch)
 
 int boot(void)
 {
-	if (k_boot() != 0)
+	if (c_boot() != 0)
 		return -1;
 
-	k_log_trace("Preparing software...");
+	c_log_trace("Preparing software...");
 	register_app("Terminal", win_spawn_iterm);
 	register_app("Palette", win_spawn_palette);
 	register_app("Guide", win_spawn_help);
 
-	/* start the kernel */
-	k_start();
+	c_start();
 
 	return 0;
 }
@@ -180,7 +179,7 @@ int main(void)
 	int ch;
 
 	if (boot() != 0) {
-		k_log_fatal("some of booting process was failed. Aborting.");
+		c_log_fatal("some of booting process was failed. Aborting.");
 		return 1;
 	}
 
@@ -244,6 +243,6 @@ int main(void)
 	return 0;
 
  shutdown:
-	k_shutdown();
+	c_shutdown();
 	return 0;
 }

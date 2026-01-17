@@ -721,8 +721,8 @@ static void draw_statusbar(void)
 		char time_str[16];
 		strftime(time_str, sizeof(time_str), "%H:%M:%S", t);
 
-		cached_usage = k_get_workdir_usage();
-		cached_rss = k_self_get_rss() / 1024;
+		cached_usage = c_get_workdir_usage();
+		cached_rss = c_self_get_rss() / 1024;
 
 		snprintf(status_left, sizeof(status_left),
 			 " %s | Used: %d %ld(kb) | Open: %d", time_str,

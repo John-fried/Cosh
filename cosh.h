@@ -1,8 +1,7 @@
 #ifndef COSH_H
 #define COSH_H
 
-#include "wmcurses.h"
-#include "Kernel/kernel.h"
+#include "Core/core.h"
 #include "util.h"
 
 #include <string.h>

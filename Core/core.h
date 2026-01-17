@@ -1,5 +1,5 @@
-#ifndef KERNEL_H
-#define KERNEL_H
+#ifndef CORE_H
+#define CORE_H
 
 #include "log.h"
 #include "../wmcurses.h"
@@ -25,39 +25,16 @@ struct workdir_state {
 	int cached;		/* Flag to avoid pointer access to not existsten memory */
 };
 
-int k_get_workdir_usage(void);
-long k_self_get_rss(void);
-int k_load_config(void);
-int k_boot(void);
-void k_start(void);
-void k_shutdown(void);
+int c_get_workdir_usage(void);
+long c_self_get_rss(void);
+int c_load_config(void);
+int c_boot(void);
+void c_start(void);
+void c_shutdown(void);
 
 extern char WORKDIR[PATH_MAX];
 extern char CONFIGFILE[PATH_MAX];
 
 extern struct workdir_state *wstate;
 
-/* config management */
-typedef enum {
-	TYPE_INT,
-	TYPE_STR,
-	TYPE_BOOL
-} cfg_type;
-
-typedef struct {
-	const char *key;
-	const char *desc;
-	void *target;
-	const char *def_val;
-	cfg_type type;
-	size_t len;
-} config_item;
-
-typedef struct {
-	const char *name;
-	const char *desc;
-	const config_item *items;
-	int item_count;
-} config_section;
-
-#endif				/* KERNEL_H */
+#endif				/* CORE_H */

@@ -12,7 +12,7 @@ DESTDIR ?=
 # Directories
 APP_DIR := Apps
 UTIL_DIR := Utils
-KERNEL_DIR := Kernel
+CORE_DIR := Core
 LIBS_DIR := Libs
 BUILD_DIR := Build
 OBJ_DIR := $(BUILD_DIR)/obj
@@ -22,14 +22,14 @@ TARGETNAME  := cosh
 TARGETPATH := $(BUILD_DIR)/$(TARGETNAME)
 
 # Core source files
-CORE_SRCS := $(wildcard ./*.c)
+MAIN_SRCS := $(wildcard ./*.c)
 APP_SRCS  := $(wildcard $(APP_DIR)/*.c)
 UTIL_SRCS := $(wildcard $(UTIL_DIR)/*.c)
-KERNEL_SRCS := $(wildcard $(KERNEL_DIR)/*.c)
+CORE_SRCS := $(wildcard $(CORE_DIR)/*.c)
 LIBS_SRCS   := $(shell find $(LIBS_DIR) -name "*.c")
 
 # Combine all sources
-SRCS      := $(LIBS_SRCS) $(KERNEL_SRCS) $(CORE_SRCS) $(UTIL_SRCS) $(APP_SRCS)
+SRCS      := $(LIBS_SRCS) $(CORE_SRCS) $(MAIN_SRCS) $(UTIL_SRCS) $(APP_SRCS)
 
 # Generate object paths in object directory
 OBJS      := $(SRCS:%.c=$(OBJ_DIR)/%.o)
