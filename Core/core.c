@@ -10,7 +10,7 @@ int c_boot(void)
 {
 	snprintf(WORKDIR, sizeof(WORKDIR), "%s/%s/%s", get_homedir(),
 		 XDG_DATA_DEF, WORKDIR_NAME);
-	snprintf(CONFIGFILE, strlen(WORKDIR) + strlen(CONFIGFILENAME), "%s/%s",
+	snprintf(CONFIGFILE, sizeof(CONFIGFILE), "%s/%s",
 		 WORKDIR, CONFIGFILENAME);
 
 	struct stat sb;

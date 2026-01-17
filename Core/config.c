@@ -10,31 +10,21 @@ static const config_item desktop_items[] = {
 
 static const config_item key_items[] = {
 	CFG_INT("modifier", "27 is Alt", &wm.configs.keys.modifier, "27"),
-	CFG_STR("win_mv_up", "Move focused window up",
-		wm.configs.keys.win_mv_up, "k"),
-	CFG_STR("win_mv_down", "Move focused window down",
-		wm.configs.keys.win_mv_down, "j"),
-	CFG_STR("win_mv_right", "Move focused window right",
-		wm.configs.keys.win_mv_right, "l"),
-	CFG_STR("win_mv_left", "Move focused window left",
-		wm.configs.keys.win_mv_left, "h"),
+	CFG_STR("win_mv_up", "Move focused window up", &wm.configs.keys.win_mv_up, "k"),
+	CFG_STR("win_mv_down", "Move focused window down", &wm.configs.keys.win_mv_down, "j"),
+	CFG_STR("win_mv_right", "Move focused window right", &wm.configs.keys.win_mv_right, "l"),
+	CFG_STR("win_mv_left", "Move focused window left", &wm.configs.keys.win_mv_left, "h"),
 };
 
 static const config_item color_items[] = {
-	CFG_INT("desktop", "Desktop background colors",
-		&wm.configs.colorscheme.desktop, "232"),
-	CFG_INT("standard", "Standard window foreground",
-		&wm.configs.colorscheme.standard, "7"),
-	CFG_INT("standard_bg", "Standard window background",
-		&wm.configs.colorscheme.standard_bg, "0"),
+	CFG_INT("desktop", "Desktop background colors", &wm.configs.colorscheme.desktop, "232"),
+	CFG_INT("standard", "Standard window foreground", &wm.configs.colorscheme.standard, "7"),
+	CFG_INT("standard_bg", "Standard window background", &wm.configs.colorscheme.standard_bg, "0"),
 	CFG_INT("cursor", "Cursor color", &wm.configs.colorscheme.cursor, "0"),
-	CFG_INT("cursor_bg", "Cursor background",
-		&wm.configs.colorscheme.cursor_bg, "8"),
+	CFG_INT("cursor_bg", "Cursor background", &wm.configs.colorscheme.cursor_bg, "8"),
 	CFG_INT("accent", "Accent color", &wm.configs.colorscheme.accent, "1"),
-	CFG_INT("statusbar", "Statusbar text",
-		&wm.configs.colorscheme.statusbar, "7"),
-	CFG_INT("statusbar_bg", "Statusbar background",
-		&wm.configs.colorscheme.statusbar_bg, "31")
+	CFG_INT("statusbar", "Statusbar text", &wm.configs.colorscheme.statusbar, "7"),
+	CFG_INT("statusbar_bg", "Statusbar background", &wm.configs.colorscheme.statusbar_bg, "31")
 };
 
 static const config_section app_config[] = {
