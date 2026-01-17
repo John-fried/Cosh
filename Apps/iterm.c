@@ -174,16 +174,21 @@ static int cb_settermprop(VTermProp prop, VTermValue *val, void *user)
 	iterm_t *self = (iterm_t *) win->priv;
 
 	if (prop == VTERM_PROP_TITLE) {
-		//handle manual len, val->string didnt know where to end
-		VTermStringFragment frag = val->string;
 		char title_buf[64];
-		size_t safe_len =
-		    (frag.len <
-		     sizeof(title_buf) - 1) ? frag.len : sizeof(title_buf) - 1;
+		size_t safe_len;
 
+#if defined(VTERM_VERSION_MAJOR) && VTERM_VERSION_MAJOR >= 3
+		safe_len = (frag.len < sizeof(title_buf) - 1) ? frag.len : sizeof(title_buf) - 1;
 		memcpy(title_buf, frag.str, safe_len);
-		title_buf[safe_len] = '\0';
+#else
+		// for older version of libvterm, val->string was a const char*
+		if (val->string) {
+			safe_len = (strlen(val->string) < sizeof(title_buf) - 1) ? strlen(val->string) : sizeof(title_buf) - 1;
+			strncpy(title_buf, val->string, sizeof(title_buf));
+		}
+#endif
 
+		title_buf[safe_len] = '\0';
 		win_setopt(win, WIN_OPT_TITLE, title_buf);
 	}
 

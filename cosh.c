@@ -3,6 +3,8 @@
 void win_spawn_iterm(void);
 void win_spawn_palette(void);
 void win_spawn_help(void);
+void app_shutdown_render(void);
+void confirm_shutdown(void);
 
 app_entry_t *app_registry = NULL;
 int app_count = 0;
@@ -24,46 +26,6 @@ void register_app(const char *name, void (*spawn)(void))
 	app_registry = new_app;
 	app_count++;
 
-}
-
-void app_shutdown_render(cosh_win_t *win)
-{
-	mvwprintw(win->ptr, 2, (win->w - 16) / 2, "CONFIRM SHUTDOWN");
-	mvwprintw(win->ptr, 3, (win->w - 22) / 2, "Press [y] Yes | [n] No");
-}
-
-int confirm_shutdown(void)
-{
-	int h = 6, w = 40, res = 0;
-	cosh_win_t *dlg = win_create(h, w, WIN_FLAG_LOCKED);
-	if (!dlg)
-		return 0;
-
-	win_setopt(dlg, WIN_OPT_TITLE, "System Alert");
-	win_setopt(dlg, WIN_OPT_RENDER, app_shutdown_render);
-	win_setopt(dlg, WIN_OPT_BG, COLOR_BLUE);
-
-	dlg->y = (LINES - h) / 2;
-	dlg->x = (COLS - w) / 2;
-	mvwin(dlg->ptr, dlg->y, dlg->x);
-
-	win_vibrate();
-
-	while (1) {
-		win_refresh_all();
-		int ch = wgetch(dlg->ptr);
-		if (ch == 'y' || ch == 'Y') {
-			res = 1;
-			break;
-		}
-		if (ch == 'n' || ch == 'N' || ch == 27) {
-			res = 0;
-			break;
-		}
-	}
-
-	win_destroy_focused();
-	return res;
 }
 
 static void dispatch_input(int ch)
@@ -167,6 +129,7 @@ int boot(void)
 	register_app("Terminal", win_spawn_iterm);
 	register_app("Palette", win_spawn_palette);
 	register_app("Guide", win_spawn_help);
+	register_app("Shutdown", confirm_shutdown);
 
 	c_start();
 
@@ -211,8 +174,7 @@ int main(void)
 			if (pfds[0].revents & POLLIN) {
 				while ((ch = getch()) != ERR) {
 					if (ch == CTRL('/')) {
-						if (confirm_shutdown())
-							goto shutdown;
+						confirm_shutdown();
 					} else {
 						dispatch_input(ch);
 					}
@@ -240,9 +202,5 @@ int main(void)
 			win_refresh_all();
 	}
 
-	return 0;
-
- shutdown:
-	c_shutdown();
 	return 0;
 }

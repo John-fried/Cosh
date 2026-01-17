@@ -85,18 +85,14 @@ void wm_init(void)
 
 	cosh_wm_config_t config = wm.configs;
 
-	init_pair(CP_WIN_BG, config.colorscheme.desktop,
-		  config.colorscheme.desktop);
-	init_pair(CP_TOS_STD, config.colorscheme.standard,
-		  config.colorscheme.standard_bg);
+	init_pair(CP_WIN_BG, config.colorscheme.desktop, config.colorscheme.desktop);
+	init_pair(CP_TOS_STD, config.colorscheme.standard, config.colorscheme.standard_bg);
 	init_pair(CP_TOS_HDR, COLOR_CYAN, COLOR_BLACK);
 	init_pair(CP_TOS_HDR_UNF, COLOR_GREY, COLOR_BLACK);	// Dimmed
-	init_pair(CP_TOS_BAR, config.colorscheme.statusbar,
-		  config.colorscheme.statusbar_bg);
-	init_pair(CP_TOS_ACC, config.colorscheme.accent,
-		  config.colorscheme.standard_bg);
-	init_pair(CP_CURSOR, config.colorscheme.cursor,
-		  config.colorscheme.cursor_bg);
+	init_pair(CP_TOS_DRAG, config.colorscheme.win_drag, config.colorscheme.win_drag_bg);
+	init_pair(CP_TOS_BAR, config.colorscheme.statusbar, config.colorscheme.statusbar_bg);
+	init_pair(CP_TOS_ACC, config.colorscheme.accent, config.colorscheme.standard_bg);
+	init_pair(CP_CURSOR, config.colorscheme.cursor, config.colorscheme.cursor_bg);
 
 	init_pair(CP_REG_PURPLE, COLOR_MAGENTA, config.colorscheme.standard_bg);
 

@@ -7,7 +7,8 @@
 #define _XOPEN_SOURCE_EXTENDED
 #include <curses.h>
 #include <ncurses.h>
-#include <ncurses/panel.h>
+#include <panel.h>
+
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
@@ -132,6 +133,8 @@ typedef struct {
 
 typedef struct {
 	int desktop;
+	int win_drag;
+	int win_drag_bg;
 	int standard;
 	int standard_bg;
 	int cursor;

@@ -18,6 +18,8 @@ static const config_item key_items[] = {
 
 static const config_item color_items[] = {
 	CFG_INT("desktop", "Desktop background colors", &wm.configs.colorscheme.desktop, "232"),
+	CFG_INT("win_drag", "Your window title color when dragging the window", &wm.configs.colorscheme.win_drag, "2"),
+	CFG_INT("win_drag_bg", "", &wm.configs.colorscheme.win_drag_bg, "0"),
 	CFG_INT("standard", "Standard window foreground", &wm.configs.colorscheme.standard, "7"),
 	CFG_INT("standard_bg", "Standard window background", &wm.configs.colorscheme.standard_bg, "0"),
 	CFG_INT("cursor", "Cursor color", &wm.configs.colorscheme.cursor, "0"),

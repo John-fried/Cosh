@@ -68,8 +68,11 @@ void c_shutdown(void)
 
 	wm_cleanup_before_exit();
 	free(wstate);
+	c_log_trace("Cleaning workdir...");
 	cleanup_empty_files(WORKDIR, &dummy);
 	endwin();
+	exit(0);
+	_exit(0); //if its still remain
 }
 
 
