@@ -658,7 +658,7 @@ void win_handle_mouse(void)
 			/* Handle pressed (not click) */
 			if (ev.bstate & BUTTON1_PRESSED) {
 				/* w->y: where the y pos, is likely up/down */
-				if (ev.y >= w->y && ev.y <= w->y + 1) {
+				if (!(w->flags & WIN_FLAG_FULLSCREEN) && ev.y >= w->y && ev.y <= w->y + 1) {
 					w->drag_state.is_dragging = 1;
 					w->drag_state.drag_off_y = ev.y - w->y;
 					w->drag_state.drag_off_x = ev.x - w->x;

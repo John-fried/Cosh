@@ -38,6 +38,7 @@ typedef struct {
 	pid_t pid;
 	int active;
 	int is_altscreen;
+	int is_mouse_mode;
 
 	iterm_line_t *history;
 	int hist_head;
@@ -172,6 +173,10 @@ static int cb_settermprop(VTermProp prop, VTermValue *val, void *user)
 {
 	cosh_win_t *win = (cosh_win_t *) user;
 	iterm_t *self = (iterm_t *) win->priv;
+
+	if (prop == VTERM_PROP_MOUSE) {
+		self->is_mouse_mode = val->boolean;
+	}
 
 	if (prop == VTERM_PROP_TITLE) {
 		char title_buf[64];
@@ -341,7 +346,7 @@ void app_iterm_input(cosh_win_t *win, int ch, MEVENT *ev)
 	if (!self || !self->active)
 		return;
 
-	if (ch == KEY_MOUSE && ev != NULL) {
+	if (self->is_mouse_mode && ch == KEY_MOUSE && ev != NULL) {
 		int vterm_row = ev->y - win->y - 1;
 		int vterm_cols = ev->x - win->x - 2;
 
@@ -619,7 +624,7 @@ void iterm_cleanup(void *p)
 
 void win_spawn_iterm(void)
 {
-	cosh_win_t *win = win_create(35, 120, WIN_FLAG_NONE);
+	cosh_win_t *win = win_create(40, 80, WIN_FLAG_NONE);
 	if (!win)
 		return;
 

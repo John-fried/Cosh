@@ -129,6 +129,7 @@ typedef struct {
 	char win_mv_down[8];
 	char win_mv_right[8];
 	char win_mv_left[8];
+	char tog_fullscr[8];
 } cfg_keys_t;
 
 typedef struct {

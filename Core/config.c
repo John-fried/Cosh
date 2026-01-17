@@ -14,6 +14,7 @@ static const config_item key_items[] = {
 	CFG_STR("win_mv_down", "Move focused window down", &wm.configs.keys.win_mv_down, "j"),
 	CFG_STR("win_mv_right", "Move focused window right", &wm.configs.keys.win_mv_right, "l"),
 	CFG_STR("win_mv_left", "Move focused window left", &wm.configs.keys.win_mv_left, "h"),
+	CFG_STR("toggle_fullscreen", "The current defaukt is MOD + F (Basicly Alt + F)", &wm.configs.keys.tog_fullscr, "f"),
 };
 
 static const config_item color_items[] = {

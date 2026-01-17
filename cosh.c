@@ -56,6 +56,14 @@ static void dispatch_input(int ch)
 			return;
 		}
 
+		if (next == keyconfig.tog_fullscr[0]) {
+			if (f)
+				win_toggle_fullscreen(f);
+			else
+				beep();
+			return;
+		}
+
 		switch (next) {
 			/* Window Management */
 
@@ -69,11 +77,6 @@ static void dispatch_input(int ch)
 				win_raise(wm.count - 2);
 			break;
 
-		case 'f':
-		case 'F':
-			if (f)
-				win_toggle_fullscreen(f);
-			return;
 		case 'w':
 			win_resize_focused(1, 2);
 			return;
@@ -198,8 +201,7 @@ int main(void)
 			win_needs_redraw = 1;
 		}
 
-		if (win_needs_redraw)
-			win_refresh_all();
+		if (win_needs_redraw) win_refresh_all();
 	}
 
 	return 0;
