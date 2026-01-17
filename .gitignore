@@ -3,7 +3,7 @@
 cosh
 # Build artifacts
 .obj/
-build/
+Build/
 *.o
 #App-specific runtime data
 .cosh/

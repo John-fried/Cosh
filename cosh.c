@@ -69,9 +69,31 @@ int confirm_shutdown(void)
 static void dispatch_input(int ch)
 {
 	cosh_win_t *f = (wm.focus_idx >= 0) ? wm.stack[wm.focus_idx] : NULL;
+	cfg_keys_t keyconfig = wm.configs.keys;
 
-	if (ch == MODIFIER_KEY) {
+	if (ch == wm.configs.keys.modifier) {
 		int next = getch();
+
+		if (next == keyconfig.win_mv_left[0]) {
+			win_move_focused(0, -2);
+			return;
+		}
+
+		if (next == keyconfig.win_mv_right[0]) {
+			win_move_focused(0, 2);
+			return;
+		}
+
+		if (next == keyconfig.win_mv_up[0]) {
+			win_move_focused(-1, 0);
+			return;
+		}
+
+		if (next == keyconfig.win_mv_down[0]) {
+			win_move_focused(1, 0);
+			return;
+		}
+
 		switch (next) {
 			/* Window Management */
 
@@ -105,20 +127,6 @@ static void dispatch_input(int ch)
 		case 'p':
 		case 'P':
 			win_spawn_palette();
-			return;
-
-			/* Movement */
-		case 'h':
-			win_move_focused(0, -2);
-			return;
-		case 'l':
-			win_move_focused(0, 2);
-			return;
-		case 'k':
-			win_move_focused(-1, 0);
-			return;
-		case 'j':
-			win_move_focused(1, 0);
 			return;
 
 			/* for unfocus */
@@ -197,7 +205,7 @@ int main(void)
 		}
 
 		//check for ms
-		int ret = poll(pfds, nfds, wm.configs.refresh_rate);
+		int ret = poll(pfds, nfds, wm.configs.desktop.refresh_rate);
 
 		if (ret > 0) {
 			//Keyboard (pfds[0])
@@ -215,13 +223,12 @@ int main(void)
 			int current_pfd = 1;
 			for (int i = 0; i < wm.count; i++) {
 				if (wm.stack[i]->poll_fd >= 0) {
-					if (pfds[current_pfd].
-					    revents & (POLLIN | POLLHUP |
-						       POLLERR)) {
+					if (pfds[current_pfd].revents &
+					    (POLLIN | POLLHUP | POLLERR)) {
 						if (wm.stack[i]->tick_cb)
-							wm.stack[i]->tick_cb(wm.
-									     stack
-									     [i]);
+							wm.stack[i]->
+							    tick_cb(wm.stack
+								    [i]);
 					}
 					current_pfd++;
 				}
@@ -230,7 +237,8 @@ int main(void)
 			win_needs_redraw = 1;
 		}
 
-		if (win_needs_redraw) win_refresh_all();
+		if (win_needs_redraw)
+			win_refresh_all();
 	}
 
 	return 0;

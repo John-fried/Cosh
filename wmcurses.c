@@ -83,15 +83,22 @@ void wm_init(void)
 	printf("\033[?1002h\n");	/* force, this is super good than 1003h */
 	fflush(stdout);
 
-	init_pair(CP_WIN_BG, wm.configs.csh_desktop, wm.configs.csh_desktop);
-	init_pair(CP_TOS_STD, COLOR_WHITE, -1);
-	init_pair(CP_TOS_HDR, COLOR_CYAN, COLOR_BLACK);
-	init_pair(CP_TOS_HDR_UNF, COLOR_GREY, COLOR_BLACK); // Dimmed
-	init_pair(CP_TOS_BAR, COLOR_WHITE, wm.configs.csh_statusbar);
-	init_pair(CP_TOS_ACC, COLOR_RED, COLOR_BLACK);
-	init_pair(CP_CURSOR, COLOR_BLACK, COLOR_CYAN);
+	cosh_wm_config_t config = wm.configs;
 
-	init_pair(CP_REG_PURPLE, COLOR_MAGENTA, -1);
+	init_pair(CP_WIN_BG, config.colorscheme.desktop,
+		  config.colorscheme.desktop);
+	init_pair(CP_TOS_STD, config.colorscheme.standard,
+		  config.colorscheme.standard_bg);
+	init_pair(CP_TOS_HDR, COLOR_CYAN, COLOR_BLACK);
+	init_pair(CP_TOS_HDR_UNF, COLOR_GREY, COLOR_BLACK);	// Dimmed
+	init_pair(CP_TOS_BAR, config.colorscheme.statusbar,
+		  config.colorscheme.statusbar_bg);
+	init_pair(CP_TOS_ACC, config.colorscheme.accent,
+		  config.colorscheme.standard_bg);
+	init_pair(CP_CURSOR, config.colorscheme.cursor,
+		  config.colorscheme.cursor_bg);
+
+	init_pair(CP_REG_PURPLE, COLOR_MAGENTA, config.colorscheme.standard_bg);
 
 	wbkgd(stdscr, COLOR_PAIR(CP_TOS_STD));
 
@@ -119,12 +126,14 @@ cosh_win_t *win_create(int h, int w, int flags)
 	/* Auto-matic resize based on the terminal size */
 	if (win_get_buffreq() != WIN_DONT_RESIZE) {
 		if (h <= 0 || h > LINES - 1) {
-			h = (LINES * 4) / 10; 
-			if (h < 8 && LINES > 8) h = 8;
+			h = (LINES * 4) / 10;
+			if (h < 8 && LINES > 8)
+				h = 8;
 		}
 		if (w <= 0 || w > COLS) {
 			w = (COLS * 8) / 10;
-			if (w < 20 && COLS > 20) w = 20;
+			if (w < 20 && COLS > 20)
+				w = 20;
 		}
 	}
 
@@ -750,7 +759,11 @@ void win_refresh_all(void)
 		win_force_full = 0;
 	}
 
-	draw_statusbar();
+	if (win_needs_redraw) {
+		draw_desktop();
+		draw_statusbar();
+	}
+
 	wnoutrefresh(stdscr);
 	curs_set(0);
 
@@ -758,7 +771,6 @@ void win_refresh_all(void)
 		cosh_win_t *w = wm.stack[i];
 
 		if (w->dirty) {
-			draw_desktop();
 			werase(w->ptr);
 			if (w->render_cb)
 				w->render_cb(w);

@@ -6,7 +6,7 @@
 #include "../util.h"
 #include "XDGPATH.h"
 #include "configuration.h"
-#include "minIni/minIni.h" //ini parsing lib
+#include "minIni/minIni.h"	//ini parsing lib
 
 #include <errno.h>
 #include <sys/stat.h>
@@ -39,24 +39,25 @@ extern struct workdir_state *wstate;
 
 /* config management */
 typedef enum {
-    TYPE_INT,
-    TYPE_STR,
-    TYPE_BOOL
+	TYPE_INT,
+	TYPE_STR,
+	TYPE_BOOL
 } cfg_type;
 
 typedef struct {
-    const char *key;
-    const char *desc;
-    void *target;
-    const char *def_val;
-    cfg_type type;
+	const char *key;
+	const char *desc;
+	void *target;
+	const char *def_val;
+	cfg_type type;
+	size_t len;
 } config_item;
 
 typedef struct {
-    const char *name;
-    const char *desc;
-    const config_item *items;
-    int item_count;
+	const char *name;
+	const char *desc;
+	const config_item *items;
+	int item_count;
 } config_section;
 
 #endif				/* KERNEL_H */

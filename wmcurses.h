@@ -117,15 +117,36 @@ typedef struct cosh_win {
 	tick_fn tick_cb;
 } cosh_win_t;
 
+/* config management */
 typedef struct {
-	int show_border;//bool
-	
-	//desktop environ
 	int refresh_rate;
+} cfg_desktop_env_t;
 
-	//colorscheme
-	int csh_statusbar;
-	int csh_desktop;
+typedef struct {
+	int modifier;
+	char win_mv_up[8];
+	char win_mv_down[8];
+	char win_mv_right[8];
+	char win_mv_left[8];
+} cfg_keys_t;
+
+typedef struct {
+	int desktop;
+	int standard;
+	int standard_bg;
+	int cursor;
+	int cursor_bg;
+	int accent;
+	int statusbar;
+	int statusbar_bg;
+} cfg_colorscheme_t;
+
+typedef struct {
+	int show_border;	//bool
+
+	cfg_desktop_env_t desktop;
+	cfg_keys_t keys;
+	cfg_colorscheme_t colorscheme;
 } cosh_wm_config_t;
 
 /* global stat */

@@ -1,7 +1,7 @@
 # COSH - C-Operating System Shell
 
 CC      := gcc
-CFLAGS  := -Wall -Wextra -pedantic -O3 -march=native -std=gnu99 -ILibs -IInclude -DLOG_USE_COLOR
+CFLAGS  := -MMD -Wall -Wextra -pedantic -O3 -march=native -std=gnu99 -ILibs -IInclude -DLOG_USE_COLOR
 CFLAGS += -Wshadow -Wpointer-arith -Wstrict-prototypes
 LDFLAGS := -lpanelw -lncursesw -lutil -lvterm 
 # Installation Paths

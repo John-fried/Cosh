@@ -1,5 +1,5 @@
 /* Configuration
- * You can configure this, before compiler
+ * You can configure this, must be compiler known value
  */
 #ifndef CONFIGURATION_H
 #define CONFIGURATION_H
@@ -8,6 +8,5 @@
 #define CONFIGFILENAME "config.ini"
 
 #define WIN_MAX		32	/* Maximal open window */
-#define MODIFIER_KEY    27	/* ALT - ALT ... COMBINE */
 
 #endif				/* CONFIGURATION_H */

@@ -292,8 +292,8 @@ void app_iterm_tick(cosh_win_t *win)
 					if (self->history) {
 						for (int i = 0; i < HIST_SIZE;
 						     i++)
-							free_line(&self->
-								  history[i]);
+							free_line(&self->history
+								  [i]);
 					}
 
 					win->scroll_cur = 0;
@@ -386,8 +386,8 @@ void app_iterm_input(cosh_win_t *win, int ch, MEVENT *ev)
 			if (win->scroll_cur < win->scroll_max)
 				win->scroll_cur =
 				    (win->scroll_cur + 2 >
-				     win->scroll_max) ? win->
-				    scroll_max : win->scroll_cur + 2;
+				     win->scroll_max) ? win->scroll_max : win->
+				    scroll_cur + 2;
 			win->dirty = 1;
 			return;
 		}
@@ -506,8 +506,7 @@ void app_iterm_render(cosh_win_t *win)
 				    (self->vts, pos, &cell)) {
 					int p = (r == cur.row
 						 && c ==
-						 cur.
-						 col) ? CP_CURSOR :
+						 cur.col) ? CP_CURSOR :
 					    get_pair(self,
 						     get_color_idx(cell.fg),
 						     get_color_idx(cell.bg));
@@ -539,9 +538,8 @@ void app_iterm_render(cosh_win_t *win)
 
 			if (l && l->cells) {
 				for (int c = 0; c < cols && c < l->cols; c++) {
-					int p =
-					    get_pair(self, l->cells[c].fg,
-						     l->cells[c].bg);
+					int p = get_pair(self, l->cells[c].fg,
+							 l->cells[c].bg);
 
 					VTermScreenCell tmp_cell = { 0 };
 					memcpy(tmp_cell.chars,
