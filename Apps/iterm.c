@@ -402,61 +402,61 @@ void app_iterm_input(cosh_win_t *win, int ch, MEVENT *ev)
 			return;
 		}
 	}
+	VTermKey k = VTERM_KEY_NONE;
 
-	win->scroll_cur = win->scroll_max;
-
-	if (ch >= KEY_MIN && ch <= KEY_MAX) {
-		VTermKey k = VTERM_KEY_NONE;
+	//KEY_MIN in ncurses ussualy is 257, but enter is 10, and that why we define the enter key logic here
+	if (ch == 10 || ch == KEY_ENTER)
+		k = VTERM_KEY_ENTER;
+	else if (ch >= KEY_MIN && ch <= KEY_MAX) {
 		switch (ch) {
-		case KEY_UP:
-			k = VTERM_KEY_UP;
-			break;
-		case KEY_DOWN:
-			k = VTERM_KEY_DOWN;
-			break;
-		case KEY_LEFT:
-			k = VTERM_KEY_LEFT;
-			break;
-		case KEY_RIGHT:
-			k = VTERM_KEY_RIGHT;
-			break;
-		case KEY_BACKSPACE:
-			k = VTERM_KEY_BACKSPACE;
-			break;
-		case KEY_DC:
-			k = VTERM_KEY_DEL;
-			break;
-		case KEY_IC:
-			k = VTERM_KEY_INS;
-			break;
-		case KEY_HOME:
-			k = VTERM_KEY_HOME;
-			break;
-		case KEY_END:
-			k = VTERM_KEY_END;
-			break;
-		case KEY_PPAGE:
-			k = VTERM_KEY_PAGEUP;
-			break;
-		case KEY_NPAGE:
-			k = VTERM_KEY_PAGEDOWN;
-			break;
-		case KEY_ENTER:
-		case 10:
-			k = VTERM_KEY_ENTER;
-			break;
+			case KEY_UP:
+				k = VTERM_KEY_UP;
+				break;
+			case KEY_DOWN:
+				k = VTERM_KEY_DOWN;
+				break;
+			case KEY_LEFT:
+				k = VTERM_KEY_LEFT;
+				break;
+			case KEY_RIGHT:
+				k = VTERM_KEY_RIGHT;
+				break;
+			case KEY_BACKSPACE:
+				k = VTERM_KEY_BACKSPACE;
+				break;
+			case KEY_DC:
+				k = VTERM_KEY_DEL;
+				break;
+			case KEY_IC:
+				k = VTERM_KEY_INS;
+				break;
+			case KEY_HOME:
+				k = VTERM_KEY_HOME;
+				break;
+			case KEY_END:
+				k = VTERM_KEY_END;
+				break;
+			case KEY_PPAGE:
+				k = VTERM_KEY_PAGEUP;
+				break;
+			case KEY_NPAGE:
+				k = VTERM_KEY_PAGEDOWN;
+				break;
 		}
-		if (k != VTERM_KEY_NONE)
-			vterm_keyboard_key(self->vt, k, VTERM_MOD_NONE);
-	} else {
-		vterm_keyboard_unichar(self->vt, (uint32_t) ch, VTERM_MOD_NONE);
 	}
+	
+	if (k != VTERM_KEY_NONE)
+		vterm_keyboard_key(self->vt, k, VTERM_MOD_NONE);
+	else
+		vterm_keyboard_unichar(self->vt, (uint32_t) ch, VTERM_MOD_NONE);
 
  send_output:{
 		char out[128];
 		size_t len = vterm_output_read(self->vt, out, sizeof(out));
-		if (len > 0)
+		if (len > 0) {
+			win->scroll_cur = win->scroll_max;
 			(void)write(self->fd, out, len);
+		}
 	}
 }
 
