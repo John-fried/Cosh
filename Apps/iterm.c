@@ -346,32 +346,34 @@ void app_iterm_input(cosh_win_t *win, int ch, MEVENT *ev)
 	if (!self || !self->active)
 		return;
 
-	if (self->is_mouse_mode && ch == KEY_MOUSE && ev != NULL) {
-		int vterm_row = ev->y - win->y - 1;
-		int vterm_cols = ev->x - win->x - 2;
+	if (ch == KEY_MOUSE) {
+		if (self->is_mouse_mode && ev != NULL) {
+			int vterm_row = ev->y - win->y - 1;
+			int vterm_cols = ev->x - win->x - 2;
 
-		if (vterm_row >= 0 && vterm_row < win->vh &&
-		    vterm_cols >= 0 && vterm_cols < win->vw) {
+			if (vterm_row >= 0 && vterm_row < win->vh &&
+			    vterm_cols >= 0 && vterm_cols < win->vw) {
 
-			VTermModifier mod = VTERM_MOD_NONE;
-			if (ev->bstate & BUTTON_SHIFT)
-				mod |= VTERM_MOD_SHIFT;
-			if (ev->bstate & BUTTON_CTRL)
-				mod |= VTERM_MOD_CTRL;
+				VTermModifier mod = VTERM_MOD_NONE;
+				if (ev->bstate & BUTTON_SHIFT)
+					mod |= VTERM_MOD_SHIFT;
+				if (ev->bstate & BUTTON_CTRL)
+					mod |= VTERM_MOD_CTRL;
 
-			vterm_mouse_move(self->vt, vterm_row, vterm_cols, mod);
+				vterm_mouse_move(self->vt, vterm_row, vterm_cols, mod);
 
-			if (ev->bstate & (BUTTON1_CLICKED | BUTTON1_PRESSED)) {
-				vterm_mouse_button(self->vt, 1, 1, mod);
+				if (ev->bstate & (BUTTON1_CLICKED | BUTTON1_PRESSED)) {
+					vterm_mouse_button(self->vt, 1, 1, mod);
 
-				if (ev->bstate & BUTTON1_CLICKED) {
+					if (ev->bstate & BUTTON1_CLICKED) {
+						vterm_mouse_button(self->vt, 1, 0, mod);
+					}
+				} else if (ev->bstate & BUTTON1_RELEASED)
 					vterm_mouse_button(self->vt, 1, 0, mod);
-				}
-			} else if (ev->bstate & BUTTON1_RELEASED)
-				vterm_mouse_button(self->vt, 1, 0, mod);
-
-			goto send_output;
+			}
 		}
+
+		goto send_output;
 	}
 
 	if (self->is_altscreen) {
