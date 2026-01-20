@@ -108,18 +108,18 @@ static void dispatch_input(int ch)
 	}
 
 	switch (ch) {
-	case KEY_MOUSE:
-		win_handle_mouse();
-		break;
-	default:
-		if (f && f->input_cb) {
-			f->input_cb(f, ch, NULL);
-			f->dirty = 1;
-		} else if (!f) {
-			win_vibrate();
+		case KEY_MOUSE:
+			win_handle_mouse();
+			break;
+		default:
+			if (f && f->input_cb) {
+				f->input_cb(f, ch, NULL);
+				f->dirty = 1;
+			} else if (!f) {
+				win_vibrate();
+			}
+			break;
 		}
-		break;
-	}
 	win_needs_redraw = 1;
 }
 

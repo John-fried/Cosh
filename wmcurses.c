@@ -80,7 +80,7 @@ void wm_init(void)
 
 	mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
 
-	printf("\033[?1002h\n");	/* force, this is super good than 1003h */
+	printf("\033[?1002h\n");
 	fflush(stdout);
 
 	cosh_wm_config_t config = wm.configs;

@@ -175,26 +175,11 @@ static int cb_settermprop(VTermProp prop, VTermValue *val, void *user)
 	iterm_t *self = (iterm_t *) win->priv;
 
 	if (prop == VTERM_PROP_MOUSE) {
-		self->is_mouse_mode = val->boolean;
+		self->is_mouse_mode = val->number;
 	}
 
 	if (prop == VTERM_PROP_TITLE) {
-		char title_buf[64];
-		size_t safe_len;
-
-#if defined(VTERM_VERSION_MAJOR) && VTERM_VERSION_MAJOR >= 3
-		safe_len = (frag.len < sizeof(title_buf) - 1) ? frag.len : sizeof(title_buf) - 1;
-		memcpy(title_buf, frag.str, safe_len);
-#else
-		// for older version of libvterm, val->string was a const char*
-		if (val->string) {
-			safe_len = (strlen(val->string) < sizeof(title_buf) - 1) ? strlen(val->string) : sizeof(title_buf) - 1;
-			strncpy(title_buf, val->string, sizeof(title_buf));
-		}
-#endif
-
-		title_buf[safe_len] = '\0';
-		win_setopt(win, WIN_OPT_TITLE, title_buf);
+		win_setopt(win, WIN_OPT_TITLE, val->string);
 	}
 
 	/* just handle closing altscreen only */
@@ -347,35 +332,37 @@ void app_iterm_input(cosh_win_t *win, int ch, MEVENT *ev)
 		return;
 
 	if (ch == KEY_MOUSE) {
-		if (self->is_mouse_mode && ev != NULL) {
-			int vterm_row = ev->y - win->y - 1;
-			int vterm_cols = ev->x - win->x - 2;
+	    if (self->is_mouse_mode > 0 && ev != NULL) {
+		int vterm_row = ev->y - win->y - 1;
+		int vterm_cols = ev->x - win->x - 2;
 
-			if (vterm_row >= 0 && vterm_row < win->vh &&
-			    vterm_cols >= 0 && vterm_cols < win->vw) {
+		if (vterm_row >= 0 && vterm_row < win->vh &&
+		    vterm_cols >= 0 && vterm_cols < win->vw) {
 
-				VTermModifier mod = VTERM_MOD_NONE;
-				if (ev->bstate & BUTTON_SHIFT)
-					mod |= VTERM_MOD_SHIFT;
-				if (ev->bstate & BUTTON_CTRL)
-					mod |= VTERM_MOD_CTRL;
+		    VTermModifier mod = VTERM_MOD_NONE;
+		    if (ev->bstate & BUTTON_SHIFT) mod |= VTERM_MOD_SHIFT;
+		    if (ev->bstate & BUTTON_CTRL)  mod |= VTERM_MOD_CTRL;
+		    
+		    vterm_mouse_move(self->vt, vterm_row, vterm_cols, mod);
 
-				vterm_mouse_move(self->vt, vterm_row, vterm_cols, mod);
+		    int is_dragging = (ev->bstate & (REPORT_MOUSE_POSITION | BUTTON1_PRESSED));
+		    
+		    if (self->is_mouse_mode >= 3 || (self->is_mouse_mode >= 2 && is_dragging)) {
+			vterm_mouse_move(self->vt, vterm_row, vterm_cols, mod);
+		    }
 
-				if (ev->bstate & (BUTTON1_CLICKED | BUTTON1_PRESSED)) {
-					vterm_mouse_button(self->vt, 1, 1, mod);
-
-					if (ev->bstate & BUTTON1_CLICKED) {
-						vterm_mouse_button(self->vt, 1, 0, mod);
-					}
-				} else if (ev->bstate & BUTTON1_RELEASED)
-					vterm_mouse_button(self->vt, 1, 0, mod);
-			}
+		    if (ev->bstate & (BUTTON1_CLICKED | BUTTON1_PRESSED)) {
+			vterm_mouse_button(self->vt, 1, 1, mod);
+			if (ev->bstate & BUTTON1_CLICKED)
+				vterm_mouse_button(self->vt, 1, 0, mod);
+		    } else if (ev->bstate & BUTTON1_RELEASED) {
+			vterm_mouse_button(self->vt, 1, 0, mod);
+		    }
 		}
-
-		goto send_output;
+	    }
+	    goto send_output;
 	}
-
+	
 	if (self->is_altscreen) {
 		if (ch == WIN_MOUSE_SCROLL_UP) {
 			vterm_keyboard_key(self->vt, VTERM_KEY_UP,
